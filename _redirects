@@ -1,6 +1,0 @@
-# Cloudflare Pages _redirects
-# SPA-style fallback — redirect 404s to index (handles direct URL access)
-# Not strictly needed for a multi-page static site, but good practice.
-
-# Redirect bare domain to index
-/  /index.html  200

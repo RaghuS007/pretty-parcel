@@ -1,13 +1,8 @@
-/*
-  Cloudflare Pages _headers file
-  Sets security headers and optimal cache policies for static assets.
-*/
-
 # Cache static assets aggressively (1 year)
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# HTML files — revalidate every time (ensures fresh content)
+# HTML files - revalidate on every request
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
 

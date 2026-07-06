@@ -1,2 +1,2 @@
-name = "pretty-parcel"
-pages_build_output_dir = "."
+# wrangler.toml
+name = 'pretty-parcel-next'

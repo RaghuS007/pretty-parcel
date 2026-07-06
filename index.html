@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Pretty Parcel by Neems — Premium Jewellery &amp; Hair Accessories</title>
+<meta name="description" content="Curated demi-fine jewellery, traditional &amp; oxidised pieces and hair accessories. Wrapped with love in Bengaluru, delivered across India.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="home">
+<div id="siteHeader"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">The Golden Hour Collection</div>
+      <h1>Little parcels of <em>everyday elegance</em></h1>
+      <p>Demi-fine jewellery, heirloom-inspired oxidised pieces and hair accessories — each one curated with love and wrapped like a gift, even when it's for you.</p>
+      <a class="btn btn-primary" href="shop.html">Shop the Collection</a>
+      <a class="btn btn-outline" href="shop.html?cat=oxidised" style="margin-left:10px">Oxidised Edit</a>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card"><div class="ph" id="heroPh"></div></div>
+      <div class="gift-note"><div class="to">For you, with love</div><div class="from">— Neems</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- NEW ARRIVALS -->
+<section class="block">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">Just unwrapped</span><h2>New Arrivals</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="rowNew"></div>
+  </div>
+</section>
+
+<!-- BEST SELLERS -->
+<section class="block tint">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">Loved by everyone</span><h2>Best Sellers</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="rowBest"></div>
+  </div>
+</section>
+
+<!-- FEATURED COLLECTIONS -->
+<section class="block">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">Explore</span><h2>Featured Collections</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="band">
+      <a href="shop.html?cat=demi-fine"><div class="bg" data-band="demi-fine"></div><span class="band-label">Demi-Fine Jewellery</span></a>
+      <a href="shop.html?cat=oxidised"><div class="bg" data-band="oxidised"></div><span class="band-label">Traditional &amp; Oxidised</span></a>
+      <a href="shop.html?cat=hair"><div class="bg" data-band="hair"></div><span class="band-label">Hair Accessories</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- OXIDISED HIGHLIGHT -->
+<section class="block tint">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">Rooted in tradition</span><h2>The Oxidised Edit</h2></div>
+    <p class="section-sub">Hand-finished german silver and heirloom silhouettes — for festive days and every day.</p>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="rowOxidised"></div>
+  </div>
+</section>
+
+<!-- HAIR ACCESSORIES -->
+<section class="block">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">The finishing touch</span><h2>Hair Accessories</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="rowHair"></div>
+  </div>
+</section>
+
+<!-- RECENTLY VIEWED (hidden when empty) -->
+<section class="block tint" id="rvSection">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">Pick up where you left off</span><h2>Recently Viewed</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row"></div>
+    <p style="text-align:center;margin-top:6px"><button class="btn btn-ghost btn-sm" onclick="clearRecentlyViewed();renderRecentlyViewed('rvSection')">Clear all</button></p>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="block">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">From our parcel people</span><h2>Kind Words</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="testis">
+      <div class="testi"><div class="stars">★★★★★</div><p>"The unboxing felt like a gift to myself. The jhumkas are even prettier in person."</p><div class="who">Ananya · Bengaluru</div></div>
+      <div class="testi"><div class="stars">★★★★★</div><p>"Ordered the claw clip and scrunchie set for my sister — the handwritten note made her day."</p><div class="who">Priyanka · Hyderabad</div></div>
+      <div class="testi"><div class="stars">★★★★★</div><p>"Finally, demi-fine that doesn't tarnish in a month. The layered necklace is my daily go-to."</p><div class="who">Shruti · Mumbai</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTAGRAM -->
+<section class="block tint">
+  <div class="wrap">
+    <div class="section-head"><span class="eyebrow">@theprettyparcelbyneems</span><h2>On Instagram</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="insta-grid" id="instaGrid"></div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="block">
+  <div class="wrap">
+    <div class="newsletter">
+      <h2>Join the parcel list</h2>
+      <p>New collections, restocks and little surprises — straight to your inbox. No noise, we promise.</p>
+      <form onsubmit="event.preventDefault();toast('Welcome to the parcel list ♡');this.reset()">
+        <input type="email" placeholder="Your email address" required aria-label="Email address">
+        <button class="btn btn-primary" type="submit">Subscribe</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="siteFooter"></div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js?v=1.1"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const hero = byId("p07");
+  document.getElementById("heroPh").innerHTML = productSVG(hero);
+  renderCards(document.getElementById("rowNew"), PRODUCTS.filter(p => p.isNew));
+  renderCards(document.getElementById("rowBest"), PRODUCTS.filter(p => p.bestseller));
+  renderCards(document.getElementById("rowOxidised"), PRODUCTS.filter(p => p.cat === "oxidised"));
+  renderCards(document.getElementById("rowHair"), PRODUCTS.filter(p => p.cat === "hair"));
+  renderRecentlyViewed("rvSection");
+  // category band + instagram placeholders
+  document.querySelectorAll("[data-band]").forEach(el => {
+    const sample = PRODUCTS.find(p => p.cat === el.dataset.band && p.bestseller) || PRODUCTS.find(p => p.cat === el.dataset.band);
+    el.innerHTML = productSVG(sample, 1);
+  });
+  document.getElementById("instaGrid").innerHTML =
+    PRODUCTS.slice(0, 6).map((p, i) => `<a href="product.html?id=${p.id}" aria-label="${p.name}">${productSVG(p, i % 3)}</a>`).join("");
+});
+</script>
+</body>
+</html>

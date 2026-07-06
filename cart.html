@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Cart — The Pretty Parcel by Neems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="cart">
+<div id="siteHeader"></div>
+
+<div class="wrap">
+  <div class="crumbs"><a href="index.html">Home</a><span>›</span>Cart</div>
+  <div id="cartContent"></div>
+
+  <!-- Complete the look -->
+  <section class="block" id="ctlSection" style="display:none">
+    <div class="section-head"><span class="eyebrow">Goes beautifully with your cart</span><h2>Complete the Look</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="ctlRow"></div>
+  </section>
+</div>
+
+<div id="siteFooter"></div>
+<script src="assets/data.js"></script>
+<script src="assets/app.js?v=1.1"></script>
+<script>
+let activeStep = 1;
+let appliedCoupon = store.get("coupon", null);
+let checkoutAddress = null;
+let checkoutPayment = "cod";
+
+function renderCartPage() {
+  const cart = getCart();
+  const ids = Object.keys(cart).filter(id => byId(id));
+  const el = document.getElementById("cartContent");
+  const ctl = document.getElementById("ctlSection");
+
+  if (!ids.length && activeStep !== 4) {
+    el.innerHTML = `<div class="empty">
+      <div class="big">Your parcel is empty</div>
+      <p>Beautiful things are waiting — start with our best sellers.</p>
+      <p style="margin-top:18px"><a class="btn btn-primary" href="shop.html">Continue shopping</a></p></div>`;
+    if (ctl) ctl.style.display = "none";
+    return;
+  }
+
+  const COUPONS = getCoupons();
+  const subtotal = ids.reduce((s, id) => s + byId(id).price * cart[id], 0);
+  let discount = 0, couponMsg = "";
+  if (appliedCoupon) {
+    const c = COUPONS[appliedCoupon];
+    if (!c) { appliedCoupon = null; store.set("coupon", null); }
+    else if (c.min && subtotal < c.min) couponMsg = `<p class="coupon-msg err">${appliedCoupon}: needs a minimum of ${INR(c.min)}</p>`;
+    else { discount = c.type === "pct" ? Math.round(subtotal * c.value / 100) : c.value;
+           couponMsg = `<p class="coupon-msg ok">${appliedCoupon} applied — ${c.label} ✓</p>`; }
+  }
+  const shipping = (subtotal - discount) >= 999 ? 0 : 79;
+  const total = subtotal - discount + shipping;
+
+  const wizardHeaderHtml = `
+    <div class="wizard-steps">
+      <div class="wizard-step ${activeStep >= 1 ? "done" : ""} ${activeStep === 1 ? "active" : ""}">
+        <div class="circle">1</div>
+        <span>Review</span>
+      </div>
+      <div class="wizard-step ${activeStep >= 2 ? "done" : ""} ${activeStep === 2 ? "active" : ""}">
+        <div class="circle">2</div>
+        <span>Shipping</span>
+      </div>
+      <div class="wizard-step ${activeStep >= 3 ? "done" : ""} ${activeStep === 3 ? "active" : ""}">
+        <div class="circle">3</div>
+        <span>Payment</span>
+      </div>
+      <div class="wizard-step ${activeStep >= 4 ? "done" : ""} ${activeStep === 4 ? "active" : ""}">
+        <div class="circle">✓</div>
+        <span>Confirmation</span>
+      </div>
+    </div>
+  `;
+
+  if (activeStep === 1) {
+    if (ctl) {
+      const recs = completeTheLook(ids, 4);
+      if (recs.length) { ctl.style.display = ""; renderCards(document.getElementById("ctlRow"), recs); }
+      else ctl.style.display = "none";
+    }
+
+    el.innerHTML = wizardHeaderHtml + `
+      <div class="cart-layout">
+        <div>
+          <h1 class="display" style="font-size:32px;margin-bottom:18px">Your Parcel <span style="font-size:16px;color:var(--ink-soft);font-family:var(--font-body)">(${ids.length} item${ids.length>1?"s":""})</span></h1>
+          ${ids.map(id => { const p = byId(id); return `
+          <div class="cart-item">
+            <a class="ph" href="product.html?id=${p.id}">${productSVG(p)}</a>
+            <div>
+              <span class="cat">${p.sub}</span>
+              <h3><a href="product.html?id=${p.id}">${p.name}</a></h3>
+              <div class="qty">
+                <button aria-label="Decrease quantity" onclick="changeQty('${p.id}',-1)">−</button>
+                <span>${cart[id]}</span>
+                <button aria-label="Increase quantity" onclick="changeQty('${p.id}',1)">+</button>
+              </div>
+              <div><button class="remove-link" onclick="removeItem('${p.id}')">Remove</button></div>
+            </div>
+            <div style="font-weight:600">${INR(p.price * cart[id])}</div>
+          </div>`; }).join("")}
+        </div>
+
+        <aside class="summary">
+          <h3>Order Summary</h3>
+          <div class="coupon-row">
+            <input id="couponInput" placeholder="Coupon code" value="${appliedCoupon || ""}" aria-label="Coupon code">
+            <button class="btn btn-ghost btn-sm" onclick="applyCoupon()">Apply</button>
+          </div>
+          ${couponMsg}
+          <div class="sum-row"><span>Subtotal</span><span>${INR(subtotal)}</span></div>
+          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
+          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free ✓"}</span></div>
+          ${shipping ? `<div class="sum-row" style="font-size:12px;color:var(--rose-deep)"><span>Add ${INR(999 - (subtotal - discount))} more for free shipping</span><span></span></div>` : ""}
+          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="goToStep(2)">Proceed to Shipping</button>
+          <div class="pay-methods">
+            <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Paytm</span><span>Visa</span><span>Mastercard</span><span>RuPay</span><span>Net Banking</span>
+          </div>
+          <p style="font-size:11.5px;color:var(--ink-soft);margin-top:12px">🔒 100% secure payments · Gift-wrapped free · COD available</p>
+        </aside>
+      </div>
+    `;
+  }
+  else if (activeStep === 2) {
+    if (ctl) ctl.style.display = "none";
+
+    const u = getUser();
+    if (!u) {
+      toast("Please log in to check out");
+      setTimeout(() => location.href = "login.html?next=cart.html", 900);
+      return;
+    }
+
+    const addresses = getAddresses();
+    const defaultAddr = addresses.find(a => a.isDefault) || addresses[0] || {};
+    if (addresses.length && !checkoutAddress) {
+      checkoutAddress = defaultAddr;
+    }
+
+    el.innerHTML = wizardHeaderHtml + `
+      <div class="cart-layout">
+        <div>
+          <h1 class="display" style="font-size:32px;margin-bottom:18px">Shipping Details</h1>
+          
+          ${addresses.length ? `
+            <div style="margin-bottom: 22px; text-align: left;">
+              <h4 style="font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--rose-deep); margin-bottom: 12px; font-weight: 600;">Deliver to a saved address</h4>
+              <div class="address-grid" style="grid-template-columns: 1fr; margin-bottom:14px;">
+                ${addresses.map(a => `
+                  <div class="address-card ${a.id === checkoutAddress?.id ? "default" : ""}" onclick="selectCheckoutAddress('${a.id}')" style="cursor: pointer; padding: 14px;">
+                    ${a.isDefault ? `<span class="address-badge" style="top:12px; right:12px;">Default</span>` : ""}
+                    <strong style="font-size: 13.5px;">${a.label}</strong>
+                    <div style="font-size:13px; color:var(--ink-soft); margin-top:4px;">
+                      ${a.name} · ${a.phone}<br>${a.line}<br>${a.city}, ${a.state} ${a.pincode}
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="toggleNewAddressForm()">+ Deliver to a new address</button>
+            </div>
+          ` : ""}
+          
+          <form id="shippingForm" onsubmit="submitShipping(event)" style="display: ${addresses.length ? "none" : "block"}; text-align: left;">
+            <div class="field">
+              <label for="shipName">Recipient Name</label>
+              <input id="shipName" placeholder="e.g. Ananya Sharma" required value="${u.name}">
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="shipPhone">Mobile Number</label>
+                <input id="shipPhone" placeholder="10-digit number" required pattern="[6-9][0-9]{9}" value="${u.mobile}">
+              </div>
+              <div class="field">
+                <label for="shipEmail">Email Address</label>
+                <input id="shipEmail" type="email" placeholder="e.g. name@domain.com" required value="${u.email || ""}">
+              </div>
+            </div>
+            <div class="field">
+              <label for="shipLine">Delivery Address (House No, Building, Street, Area)</label>
+              <input id="shipLine" placeholder="e.g. Flat 402, Royal Palms, 5th Main" required>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="shipCity">City</label>
+                <input id="shipCity" placeholder="e.g. Bengaluru" required>
+              </div>
+              <div class="field">
+                <label for="shipPincode">Pincode</label>
+                <input id="shipPincode" placeholder="6-digit pincode" required pattern="[0-9]{6}">
+              </div>
+            </div>
+            <div class="field">
+              <label for="shipState">State</label>
+              <select id="shipState" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 13px 16px; font-family: inherit; font-size: 15px; outline: none; background: var(--white); cursor: pointer;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--line)'">
+                <option value="Karnataka" selected>Karnataka</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+                <option value="Telangana">Telangana</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); cursor:pointer; margin-top:14px;">
+              <input type="checkbox" id="saveAddressCheckbox" checked style="accent-color:var(--rose); width:16px; height:16px;"> Save address to my account
+            </label>
+            <button class="btn btn-primary" type="submit" style="display: none;"></button>
+          </form>
+
+          <div style="display:flex; gap:12px; margin-top:24px;">
+            <button class="btn btn-outline" onclick="goToStep(1)" style="flex:1;">Back</button>
+            <button class="btn btn-primary" onclick="triggerShippingSubmit()" style="flex:2;">Proceed to Payment</button>
+          </div>
+        </div>
+
+        <aside class="summary">
+          <h3>Order Details</h3>
+          <div class="sum-row"><span>Items (${ids.length})</span><span>${INR(subtotal)}</span></div>
+          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
+          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free"}</span></div>
+          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+        </aside>
+      </div>
+    `;
+  }
+  else if (activeStep === 3) {
+    if (ctl) ctl.style.display = "none";
+
+    el.innerHTML = wizardHeaderHtml + `
+      <div class="cart-layout">
+        <div>
+          <h1 class="display" style="font-size:32px;margin-bottom:18px">Payment Method</h1>
+          
+          <div style="display:grid; gap:12px; text-align:left;">
+            <label class="address-card ${checkoutPayment === "cod" ? "default" : ""}" style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;" onclick="selectPayment('cod')">
+              <input type="radio" name="payMethod" value="cod" ${checkoutPayment === "cod" ? "checked" : ""} style="accent-color:var(--rose); width:18px; height:18px; margin-top:3px;">
+              <div>
+                <strong>Cash on Delivery (COD)</strong>
+                <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">No extra fees. Pay by cash or UPI on delivery.</div>
+              </div>
+            </label>
+            
+            <label class="address-card ${checkoutPayment === "upi" ? "default" : ""}" style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;" onclick="selectPayment('upi')">
+              <input type="radio" name="payMethod" value="upi" ${checkoutPayment === "upi" ? "checked" : ""} style="accent-color:var(--rose); width:18px; height:18px; margin-top:3px;">
+              <div style="flex:1;">
+                <strong>UPI (GPay / PhonePe / Paytm)</strong>
+                <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Fast &amp; secure transfer via any UPI application.</div>
+                
+                <div id="upiFields" style="margin-top:12px; display:${checkoutPayment === "upi" ? "block" : "none"};">
+                  <div class="field" style="margin-bottom:0;">
+                    <input id="upiVpa" placeholder="e.g. name@okaxis" style="padding:10px 14px; font-size:13.5px; border-radius:8px;">
+                  </div>
+                </div>
+              </div>
+            </label>
+            
+            <label class="address-card ${checkoutPayment === "card" ? "default" : ""}" style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;" onclick="selectPayment('card')">
+              <input type="radio" name="payMethod" value="card" ${checkoutPayment === "card" ? "checked" : ""} style="accent-color:var(--rose); width:18px; height:18px; margin-top:3px;">
+              <div style="flex:1;">
+                <strong>Credit / Debit Card</strong>
+                <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Pay with Visa, Mastercard, RuPay, or Maestro.</div>
+                
+                <div id="cardFields" style="margin-top:12px; display:${checkoutPayment === "card" ? "block" : "none"};">
+                  <div class="field" style="margin-bottom:10px;">
+                    <input id="cardNum" placeholder="Card number (16-digit)" maxlength="16" style="padding:10px 14px; font-size:13.5px; border-radius:8px;">
+                  </div>
+                  <div class="form-row">
+                    <div class="field" style="margin-bottom:0;">
+                      <input id="cardExpiry" placeholder="MM/YY" maxlength="5" style="padding:10px 14px; font-size:13.5px; border-radius:8px;">
+                    </div>
+                    <div class="field" style="margin-bottom:0;">
+                      <input id="cardCvv" type="password" placeholder="CVV" maxlength="3" style="padding:10px 14px; font-size:13.5px; border-radius:8px;">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:24px;">
+            <button class="btn btn-outline" onclick="goToStep(2)" style="flex:1;">Back</button>
+            <button class="btn btn-primary" onclick="completeCheckoutOrder()" style="flex:2;">Pay &amp; Place Order (${INR(total)})</button>
+          </div>
+        </div>
+
+        <aside class="summary">
+          <h3>Order Details</h3>
+          <div style="font-size:13px; color:var(--ink-soft); margin-bottom:14px; text-align:left; border-bottom:1px solid var(--line); padding-bottom:10px; line-height: 1.5;">
+            <strong style="color:var(--charcoal); font-size: 13.5px;">Shipping Address:</strong><br>
+            ${checkoutAddress?.name}<br>
+            ${checkoutAddress?.line}, ${checkoutAddress?.city} - ${checkoutAddress?.pincode}
+          </div>
+          <div class="sum-row"><span>Items</span><span>${INR(subtotal)}</span></div>
+          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
+          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free"}</span></div>
+          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+        </aside>
+      </div>
+    `;
+  }
+}
+
+function changeQty(id, d) { const c = getCart(); c[id] = Math.max(1, (c[id] || 1) + d); setCart(c); renderCartPage(); }
+function removeItem(id) { const c = getCart(); delete c[id]; setCart(c); renderCartPage(); toast("Removed from cart"); }
+
+function applyCoupon() {
+  const code = document.getElementById("couponInput").value.trim().toUpperCase();
+  if (!code) { appliedCoupon = null; store.set("coupon", null); renderCartPage(); return; }
+  const COUPONS = getCoupons();
+  if (COUPONS[code]) { appliedCoupon = code; store.set("coupon", code); toast("Coupon applied ✓"); }
+  else toast("Hmm, that code isn't valid");
+  renderCartPage();
+}
+
+function triggerShippingSubmit() {
+  const form = document.getElementById("shippingForm");
+  if (form && form.style.display !== "none") {
+    form.querySelector('button[type="submit"]').click();
+  } else {
+    // Saved address selection
+    goToStep(3);
+  }
+}
+
+function submitShipping(e) {
+  e.preventDefault();
+  const name = document.getElementById("shipName").value.trim();
+  const phone = document.getElementById("shipPhone").value.trim();
+  const email = document.getElementById("shipEmail").value.trim();
+  const line = document.getElementById("shipLine").value.trim();
+  const city = document.getElementById("shipCity").value.trim();
+  const pincode = document.getElementById("shipPincode").value.trim();
+  const state = document.getElementById("shipState").value;
+
+  checkoutAddress = {
+    name, phone, email, line, city, pincode, state,
+    label: "Custom Address"
+  };
+
+  const saveCheck = document.getElementById("saveAddressCheckbox");
+  if (saveCheck && saveCheck.checked) {
+    saveAddress({
+      label: "Saved Address",
+      name, phone, line, city, state, pincode,
+      isDefault: false
+    });
+    
+    // update email in user
+    const u = getUser();
+    if (u && !u.email) {
+      u.email = email;
+      setUser(u);
+    }
+  }
+
+  goToStep(3);
+}
+
+function selectCheckoutAddress(id) {
+  const list = getAddresses();
+  const selected = list.find(a => a.id === id);
+  if (selected) {
+    checkoutAddress = selected;
+    renderCartPage();
+  }
+}
+
+function toggleNewAddressForm() {
+  const form = document.getElementById("shippingForm");
+  if (form) {
+    form.style.display = form.style.display === "none" ? "block" : "none";
+  }
+}
+
+function selectPayment(method) {
+  checkoutPayment = method;
+  renderCartPage();
+}
+
+function completeCheckoutOrder() {
+  if (checkoutPayment === "upi") {
+    const vpa = document.getElementById("upiVpa").value.trim();
+    if (!vpa || !vpa.includes("@")) return toast("Please enter a valid UPI ID (e.g. name@okaxis)");
+  }
+  if (checkoutPayment === "card") {
+    const card = document.getElementById("cardNum").value.trim();
+    const expiry = document.getElementById("cardExpiry").value.trim();
+    const cvv = document.getElementById("cardCvv").value.trim();
+    if (card.length < 16) return toast("Please enter a valid 16-digit card number");
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) return toast("Please enter expiry in MM/YY");
+    if (cvv.length < 3) return toast("Please enter card CVV");
+  }
+
+  const el = document.getElementById("cartContent");
+  el.innerHTML = `
+    <div class="payment-loader">
+      <div class="spinner"></div>
+      <h2 style="font-family:var(--font-body); font-size:18px; font-weight:600; margin-bottom:6px;">Securing payment connection...</h2>
+      <p style="font-size:13.5px; color:var(--ink-soft);" id="paymentStatus">Verifying secure credentials with bank</p>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const status = document.getElementById("paymentStatus");
+    if (status) status.textContent = "Completing transaction safely...";
+  }, 1000);
+
+  setTimeout(() => {
+    const cart = getCart();
+    const ids = Object.keys(cart);
+    const subtotal = ids.reduce((s, id) => s + byId(id).price * cart[id], 0);
+    const COUPONS = getCoupons();
+    let discount = 0;
+    if (appliedCoupon && COUPONS[appliedCoupon]) {
+      const c = COUPONS[appliedCoupon];
+      if (!c.min || subtotal >= c.min) {
+        discount = c.type === "pct" ? Math.round(subtotal * c.value / 100) : c.value;
+      }
+    }
+    const shipping = (subtotal - discount) >= 999 ? 0 : 79;
+    const finalTotal = subtotal - discount + shipping;
+
+    decrementStocksForOrder(ids.map(id => ({ id, qty: cart[id] })));
+
+    const newOrder = {
+      id: "TPP" + Math.floor(100000 + Math.random() * 900000),
+      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      items: ids.map(id => ({ id, qty: cart[id], price: byId(id).price })),
+      itemCount: ids.reduce((s, id) => s + cart[id], 0),
+      total: finalTotal,
+      discount: discount,
+      shippingCost: shipping,
+      shipping: checkoutAddress,
+      paymentMethod: checkoutPayment,
+      status: "processing"
+    };
+
+    const orders = store.get("orders", []);
+    orders.unshift(newOrder);
+    store.set("orders", orders);
+
+    setCart({});
+    store.set("coupon", null);
+    appliedCoupon = null;
+
+    activeStep = 4;
+    toast("Order placed successfully! ♡");
+    renderSuccessPage(newOrder);
+  }, 2200);
+}
+
+function renderSuccessPage(order) {
+  const el = document.getElementById("cartContent");
+  if (document.getElementById("ctlSection")) document.getElementById("ctlSection").style.display = "none";
+
+  el.innerHTML = `
+    <div class="wizard-steps" style="max-width: 500px; margin: 10px auto 30px;">
+      <div class="wizard-step done"><div class="circle">1</div><span>Review</span></div>
+      <div class="wizard-step done"><div class="circle">2</div><span>Shipping</span></div>
+      <div class="wizard-step done"><div class="circle">3</div><span>Payment</span></div>
+      <div class="wizard-step active"><div class="circle">✓</div><span>Confirmation</span></div>
+    </div>
+    <div class="empty" style="padding: 40px 20px;">
+      <div style="font-size: 54px; margin-bottom: 12px; animation: pulse-heart 0.8s ease;">🎉</div>
+      <h1 class="display" style="font-size: 30px; color:var(--charcoal); margin-bottom: 8px;">Order Placed Successfully!</h1>
+      <p style="font-size: 16px; font-family:var(--font-display); font-style:italic; color:var(--rose-deep); margin-bottom: 24px;">Thank you for shopping with us ♡</p>
+      
+      <div class="address-card" style="max-width:480px; margin: 0 auto 24px; text-align: left; background: var(--peach-mist)">
+        <h3 style="font-family:var(--font-body); font-size:14.5px; font-weight:600; margin-bottom:10px; border-bottom:1px solid var(--line); padding-bottom:8px;">Order Details</h3>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+          <span>Order ID:</span>
+          <strong>#${order.id}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+          <span>Order Date:</span>
+          <span>${order.date}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+          <span>Recipient:</span>
+          <span>${order.shipping?.name}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+          <span>Delivery Address:</span>
+          <span style="text-align: right; max-width: 250px;">${order.shipping?.line}, ${order.shipping?.city} - ${order.shipping?.pincode}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+          <span>Items:</span>
+          <span>${order.itemCount} items</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:600; border-top: 1px dashed var(--line); padding-top:8px; margin-top:8px; color: var(--rose-deep);">
+          <span>Total Paid:</span>
+          <span>${INR(order.total)}</span>
+        </div>
+      </div>
+      
+      <p style="color:var(--ink-soft); font-size:13px; margin-bottom:28px;">Your beautiful parcel is being prepared in Bengaluru. Estimated delivery: 3–5 business days.</p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <a class="btn btn-primary btn-sm" href="index.html">Continue Shopping</a>
+        <a class="btn btn-outline btn-sm" href="account.html#orders">Track Order</a>
+      </div>
+    </div>
+  `;
+}
+
+function goToStep(step) {
+  activeStep = step;
+  renderCartPage();
+}
+
+document.addEventListener("DOMContentLoaded", renderCartPage);
+</script>
+</body>
+</html>

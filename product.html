@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product — The Pretty Parcel by Neems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="shop">
+<div id="siteHeader"></div>
+
+<div class="wrap">
+  <div class="crumbs" id="crumbs"></div>
+  <div class="pdp" id="pdp"></div>
+
+  <!-- Reviews -->
+  <section class="reviews" id="reviewsBlock">
+    <div class="section-head" style="text-align:left"><span class="eyebrow">What customers say</span><h2 style="font-size:26px">Reviews</h2></div>
+    
+    <!-- Write Review Form -->
+    <div class="review-form">
+      <h3 style="font-family:var(--font-body); font-weight:600; font-size:16px; margin-bottom:12px;">Share your thoughts</h3>
+      <form id="addReviewForm" onsubmit="submitReview(event)">
+        <div class="rating-select" id="ratingSelect">
+          <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+        </div>
+        <input type="hidden" id="reviewRating" value="5">
+        <div class="field" style="margin-bottom:12px;">
+          <label for="reviewName" style="font-size:10px;">Your Name</label>
+          <input id="reviewName" placeholder="e.g. Divya S." required style="padding: 10px 14px; border-radius:8px; font-size:13.5px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label for="reviewText" style="font-size:10px;">Review Comments</label>
+          <textarea id="reviewText" placeholder="What did you love about this parcel?" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 13.5px; min-height: 80px; resize: vertical; outline: none; background: transparent; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--rose)'" onblur="this.style.borderColor='var(--line)'"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit" style="padding: 8px 16px;">Submit Review</button>
+      </form>
+    </div>
+    
+    <div id="reviewsList" style="margin-top:16px"></div>
+  </section>
+
+  <!-- You may also love -->
+  <section class="block">
+    <div class="section-head"><span class="eyebrow">Curated for you</span><h2>You may also love</h2></div>
+    <div class="ribbon-divider"><span class="knot"></span></div>
+    <div class="scroll-row" id="relatedRow"></div>
+  </section>
+</div>
+
+<div id="siteFooter"></div>
+<script src="assets/data.js"></script>
+<script src="assets/app.js?v=1.1"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const id = new URLSearchParams(location.search).get("id") || "p01";
+  const p = byId(id) || PRODUCTS[0];
+  document.title = p.name + " — The Pretty Parcel by Neems";
+  trackView(p.id); // recently-viewed tracking (PRD §7)
+
+  document.getElementById("crumbs").innerHTML =
+    `<a href="index.html">Home</a><span>›</span><a href="shop.html?cat=${p.cat}">${CATEGORIES[p.cat]}</a><span>›</span>${p.name}`;
+
+  const wished = getWish().includes(p.id);
+  document.getElementById("pdp").innerHTML = `
+    <div>
+      <div class="gallery-main zoom-container" id="galleryMain">${productSVG(p, 0)}</div>
+      <div class="gallery-thumbs">
+        ${[0,1,2,3].map(i => `<button class="${i===0?'on':''}" aria-label="View image ${i+1}" onclick="swapImg(${i},this)">${productSVG(p, i)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="pdp-info">
+      <span class="cat">${p.sub} · ${p.collection} Collection</span>
+      <h1>${p.name}</h1>
+      <div class="rating">${"★".repeat(Math.round(p.rating))}${"☆".repeat(5 - Math.round(p.rating))}<span>${p.rating} · ${p.reviews} reviews</span></div>
+      <div class="pdp-price">${INR(p.price)} <s>${INR(p.mrp)}</s> <span class="chip" style="vertical-align:middle;margin-left:8px">${Math.round((1 - p.price / p.mrp) * 100)}% off</span></div>
+      <p class="pdp-desc">A ${p.collection} piece in ${p.material.toLowerCase()} — finished by hand, quality-checked twice, and wrapped in our signature peach parcel with a handwritten note.</p>
+      <div class="pdp-cta">
+        <button class="btn btn-primary" onclick="addToCart('${p.id}')">Add to cart</button>
+        <button class="btn btn-outline wish-lg ${wished ? "on" : ""}" data-id="${p.id}" onclick="toggleWish('${p.id}',this)">♡ Wishlist</button>
+        <button class="btn btn-outline" style="padding:13px 18px;" onclick="shareProduct('${p.name}')" title="Share Product">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+      </div>
+      <div class="accordion">
+        <details open><summary>Description</summary><div class="acc-body">Designed in Bengaluru as part of the ${p.collection} collection. Lightweight, skin-friendly and made for both festive evenings and everyday wear.</div></details>
+        <details><summary>Material</summary><div class="acc-body">${p.material}. Hypoallergenic and nickel-safe.</div></details>
+        <details><summary>Care instructions</summary><div class="acc-body">Keep away from perfume, water and sweat. Wipe gently with the soft pouch cloth included in your parcel, and store in the box provided.</div></details>
+        <details><summary>Shipping &amp; returns</summary><div class="acc-body">Ships in 24–48 hours from Bengaluru. Free shipping over ₹999. Easy 7-day exchange for damaged items.</div></details>
+      </div>
+      <div class="trust-row">
+        <span>✦ Skin-friendly plating</span><span>✦ Gift-wrapped free</span><span>✦ COD available</span>
+      </div>
+    </div>`;
+
+  window.swapImg = (i, btn) => {
+    document.getElementById("galleryMain").innerHTML = productSVG(p, i);
+    document.querySelectorAll(".gallery-thumbs button").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+  };
+
+  window.shareProduct = (name) => {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({ title: name, url: url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        toast("Link copied to clipboard! ♡");
+      });
+    }
+  };
+
+  // dynamic reviews rendering
+  function renderReviews() {
+    const list = getReviews(p.id);
+    document.getElementById("reviewsList").innerHTML = list.map(r => `
+      <div class="review">
+        <div class="stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</div>
+        <p>"${r.text}"</p>
+        <div class="who">${r.name} · Verified buyer <span style="color:var(--ink-soft); font-weight:normal; text-transform:none; float:right; font-size:11px;">${r.date}</span></div>
+      </div>
+    `).join("");
+  }
+
+  // rating star selector interaction
+  const stars = [...document.querySelectorAll("#ratingSelect span")];
+  const ratingInput = document.getElementById("reviewRating");
+  stars.forEach((s, idx) => {
+    s.addEventListener("mouseover", () => {
+      stars.forEach((x, i) => x.classList.toggle("hover", i <= idx));
+    });
+    s.addEventListener("mouseout", () => {
+      stars.forEach(x => x.classList.remove("hover"));
+    });
+    s.addEventListener("click", () => {
+      const val = s.dataset.val;
+      ratingInput.value = val;
+      stars.forEach((x, i) => x.classList.toggle("selected", i < val));
+    });
+  });
+  // select default 5 stars
+  stars.forEach((x, i) => x.classList.toggle("selected", i < 5));
+
+  window.submitReview = (e) => {
+    e.preventDefault();
+    const name = document.getElementById("reviewName").value.trim();
+    const text = document.getElementById("reviewText").value.trim();
+    const rating = parseInt(ratingInput.value);
+    addReview(p.id, name, text, rating);
+    toast("Thank you for your review! ♡");
+    document.getElementById("addReviewForm").reset();
+    stars.forEach((x, i) => x.classList.toggle("selected", i < 5));
+    ratingInput.value = "5";
+    renderReviews();
+    
+    // Update the average rating display
+    const updatedP = byId(p.id);
+    if (updatedP) {
+      document.querySelector(".pdp-info .rating").innerHTML = 
+        "★".repeat(Math.round(updatedP.rating)) + "☆".repeat(5 - Math.round(updatedP.rating)) + 
+        `<span>${updatedP.rating} · ${updatedP.reviews} reviews</span>`;
+    }
+  };
+
+  renderReviews();
+
+  // You may also love — content-based recommendations (PRD §8a)
+  renderCards(document.getElementById("relatedRow"), relatedProducts(p, 8));
+});
+</script>
+</body>
+</html>

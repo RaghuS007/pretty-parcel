@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — The Pretty Parcel by Neems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="admin">
+<div class="admin-shell">
+  <aside class="admin-side">
+    <div class="brand" style="font-family:var(--font-display)">TPP Admin</div>
+    <a href="#" class="on">◆ Dashboard</a>
+    <a href="#products">◇ Products</a>
+    <a href="#orders">◇ Orders</a>
+    <a href="#" onclick="toast('Customer database — full build');return false">◇ Customers</a>
+    <a href="#coupons">◇ Coupons</a>
+    <a href="index.html" style="margin-top:auto">← Back to store</a>
+  </aside>
+
+  <main class="admin-main">
+    <h1 class="display">Dashboard</h1>
+    <p class="sub">Saturday, 4 July 2026 · The Pretty Parcel by Neems</p>
+
+    <div class="kpis">
+      <div class="kpi"><div class="label">Revenue (30d)</div><div class="value">₹86,450</div><div class="delta">▲ 18% vs last month</div></div>
+      <div class="kpi"><div class="label">Orders (30d)</div><div class="value">112</div><div class="delta">▲ 12%</div></div>
+      <div class="kpi"><div class="label">Customers</div><div class="value">348</div><div class="delta">▲ 26 new</div></div>
+      <div class="kpi"><div class="label">Avg. order value</div><div class="value">₹772</div><div class="delta down">▼ 3%</div></div>
+    </div>
+
+    <div class="admin-grid">
+      <div class="panel-card">
+        <h3>Weekly sales</h3>
+        <div class="bar-chart" id="salesChart"></div>
+      </div>
+      <div class="panel-card">
+        <h3>Recent orders</h3>
+        <table class="data"><thead><tr><th>Order</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="recentOrders"></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel-card" id="products" style="margin-bottom:26px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Products &amp; inventory</h3>
+        <button class="btn btn-primary btn-sm" onclick="openAddProductModal()">+ Add product</button>
+      </div>
+      <div style="overflow-x:auto"><table class="data">
+        <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Rating</th><th></th></tr></thead>
+        <tbody id="productRows"></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel-card" id="coupons">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Active coupons</h3>
+        <button class="btn btn-outline btn-sm" onclick="openAddCouponModal()">+ Add coupon</button>
+      </div>
+      <table class="data">
+        <thead><tr><th>Code</th><th>Discount</th><th>Condition</th><th>Status</th><th></th></tr></thead>
+        <tbody id="couponRows"></tbody>
+      </table>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal-overlay" id="productModal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeProductModal()">&times;</button>
+        <h3 style="font-family:var(--font-body); font-weight:600; margin-bottom:18px;" id="productModalTitle">Add Product</h3>
+        <form id="productForm" onsubmit="submitProductForm(event)">
+          <input type="hidden" id="prodId">
+          <div class="field">
+            <label for="prodName">Product Name</label>
+            <input id="prodName" required style="padding:10px 14px; border-radius:8px; width:100%;">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="prodCat">Category</label>
+              <select id="prodCat" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px; outline: none; background: var(--white);">
+                <option value="demi-fine">Demi-Fine Jewellery</option>
+                <option value="oxidised">Traditional &amp; Oxidised</option>
+                <option value="hair">Hair Accessories</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="prodSub">Subcategory</label>
+              <input id="prodSub" required placeholder="e.g. Necklaces" style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="prodPrice">Price (INR)</label>
+              <input id="prodPrice" type="number" required style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+            <div class="field">
+              <label for="prodMrp">MRP (INR)</label>
+              <input id="prodMrp" type="number" required style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="prodMaterial">Material</label>
+              <input id="prodMaterial" required placeholder="e.g. Rose-gold plated" style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+            <div class="field">
+              <label for="prodCollection">Collection</label>
+              <input id="prodCollection" required placeholder="e.g. Golden Hour" style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="prodIcon">Icon Type</label>
+              <select id="prodIcon" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px; outline: none; background: var(--white);">
+                <option value="necklace">Necklace</option>
+                <option value="earring">Earring</option>
+                <option value="jhumka">Jhumka</option>
+                <option value="bracelet">Bracelet</option>
+                <option value="ring">Ring</option>
+                <option value="anklet">Anklet</option>
+                <option value="set">Set</option>
+                <option value="pendant">Pendant</option>
+                <option value="bangle">Bangle</option>
+                <option value="claw">Claw Clip</option>
+                <option value="clip">Hair Clip</option>
+                <option value="band">Hair Band</option>
+                <option value="scrunchie">Scrunchie</option>
+                <option value="bow">Hair Bow</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="prodStock">Stock Level</label>
+              <input id="prodStock" type="number" required style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+          </div>
+          <div class="field">
+            <label for="prodTags">Tags (comma separated)</label>
+            <input id="prodTags" placeholder="e.g. minimal, everyday, rose-gold" style="padding:10px 14px; border-radius:8px; width:100%;">
+          </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-primary btn-sm" type="submit">Save Product</button>
+            <button class="btn btn-outline btn-sm" type="button" onclick="closeProductModal()">Cancel</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="deleteProdBtn" onclick="triggerProductDelete()" style="margin-left:auto; display:none; background:#FFF3F0; color:#C0533B; padding: 8px 16px;">Delete</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Coupon Modal -->
+    <div class="modal-overlay" id="couponModal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeCouponModal()">&times;</button>
+        <h3 style="font-family:var(--font-body); font-weight:600; margin-bottom:18px;">Add Coupon</h3>
+        <form id="couponForm" onsubmit="submitCouponForm(event)">
+          <div class="field">
+            <label for="coupCode">Coupon Code</label>
+            <input id="coupCode" required style="padding:10px 14px; border-radius:8px; width:100%; text-transform:uppercase;">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="coupType">Type</label>
+              <select id="coupType" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px; outline: none; background: var(--white);">
+                <option value="pct">Percentage Discount (%)</option>
+                <option value="flat">Flat Discount (₹)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="coupValue">Discount Value</label>
+              <input id="coupValue" type="number" required style="padding:10px 14px; border-radius:8px; width:100%;">
+            </div>
+          </div>
+          <div class="field">
+            <label for="coupMin">Minimum Order Value (₹, optional)</label>
+            <input id="coupMin" type="number" placeholder="e.g. 1499" style="padding:10px 14px; border-radius:8px; width:100%;">
+          </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-primary btn-sm" type="submit">Save Coupon</button>
+            <button class="btn btn-outline btn-sm" type="button" onclick="closeCouponModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js?v=1.1"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  renderDashboard();
+  renderProductsTable();
+  renderCouponsTable();
+});
+
+function renderDashboard() {
+  const realOrders = store.get("orders", []);
+  const addedRevenue = realOrders.reduce((s, o) => s + o.total, 0);
+  const totalRevenue = 86450 + addedRevenue;
+  const totalOrders = 112 + realOrders.length;
+  
+  // Count unique buyers from real orders
+  const uniqueMobiles = new Set(realOrders.map(o => o.shipping?.phone).filter(Boolean));
+  const totalCustomers = 348 + uniqueMobiles.size;
+  
+  const avgOrderValue = Math.round(totalRevenue / totalOrders);
+
+  // Render KPIs
+  const kpis = document.querySelectorAll(".kpis .kpi .value");
+  if (kpis.length >= 4) {
+    kpis[0].textContent = INR(totalRevenue);
+    kpis[1].textContent = totalOrders;
+    kpis[2].textContent = totalCustomers;
+    kpis[3].textContent = INR(avgOrderValue);
+  }
+
+  // Render weekly sales bars
+  // Map orders to days of week
+  const daysMap = { "Mon": 62, "Tue": 48, "Wed": 71, "Thu": 55, "Fri": 84, "Sat": 100, "Sun": 90 };
+  
+  realOrders.forEach(o => {
+    try {
+      const dateParts = o.date.split(" ");
+      const dateObj = new Date(o.date);
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dayName = days[dateObj.getDay()];
+      if (daysMap[dayName] !== undefined) {
+        daysMap[dayName] += Math.round(o.total / 100); 
+      }
+    } catch(e) {}
+  });
+
+  const maxVal = Math.max(...Object.values(daysMap));
+  const salesHtml = Object.entries(daysMap).map(([d, v]) => {
+    const heightPercent = Math.min(100, Math.round((v / maxVal) * 100));
+    return `<div class="bar"><div class="fill" style="height:${heightPercent}%"></div><span class="lbl">${d}</span></div>`;
+  }).join("");
+  document.getElementById("salesChart").innerHTML = salesHtml;
+
+  // Render recent orders
+  const mockOrders = [
+    ["TPP482913", "₹1,848", "shipped"],
+    ["TPP482907", "₹649", "delivered"],
+    ["TPP482899", "₹2,499", "processing"],
+    ["TPP482887", "₹728", "delivered"]
+  ];
+  const realOrdersFormatted = realOrders.slice(0, 4).map(o => ["#" + o.id, INR(o.total), o.status]);
+  const combinedOrders = [...realOrdersFormatted, ...mockOrders].slice(0, 5);
+  
+  document.getElementById("recentOrders").innerHTML = combinedOrders.map(([id, amt, st]) =>
+    `<tr><td>${id}</td><td>${amt}</td><td><span class="status ${st}">${st}</span></td></tr>`
+  ).join("");
+}
+
+function renderProductsTable() {
+  const stocks = getStocks();
+  document.getElementById("productRows").innerHTML = PRODUCTS.map(p => {
+    const qty = stocks[p.id] !== undefined ? stocks[p.id] : 10;
+    const isLow = qty <= 5;
+    return `
+      <tr>
+        <td style="display:flex;gap:10px;align-items:center">
+          <span style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex:none">${productSVG(p)}</span>
+          <span>${p.name}</span>
+        </td>
+        <td>${p.sub}</td>
+        <td>${INR(p.price)}</td>
+        <td class="${isLow ? "stock-low" : ""}">
+          ${qty}${isLow ? " · low" : ""}
+          ${isLow ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px; font-size:10px; text-transform:none; margin-left:8px; border-radius:4px;" onclick="restockProduct('${p.id}')">Restock</button>` : ""}
+        </td>
+        <td>★ ${p.rating}</td>
+        <td class="mini-actions">
+          <button onclick="openEditProductModal('${p.id}')">Edit</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function restockProduct(id) {
+  updateStock(id, 30);
+  toast("Product restocked to 30 ✓");
+  renderProductsTable();
+}
+
+function renderCouponsTable() {
+  const coupons = getCoupons();
+  document.getElementById("couponRows").innerHTML = Object.entries(coupons).map(([code, c]) => {
+    const discLabel = c.type === "pct" ? `${c.value}% off` : `₹${c.value} flat`;
+    const condLabel = c.min ? `Min spend ₹${c.min}` : "—";
+    return `
+      <tr>
+        <td><strong>${code}</strong></td>
+        <td>${discLabel}</td>
+        <td>${condLabel}</td>
+        <td><span class="status delivered" style="background:#E4F3EA; color:#2E7D52;">Active</span></td>
+        <td class="mini-actions">
+          <button onclick="removeCoupon('${code}')" style="color:#C0533B; border-color:#F5EFEB;">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function removeCoupon(code) {
+  if (confirm(`Are you sure you want to delete coupon ${code}?`)) {
+    deleteCoupon(code);
+    toast(`Coupon ${code} deleted`);
+    renderCouponsTable();
+  }
+}
+
+/* --- Product Modal handlers --- */
+function openAddProductModal() {
+  document.getElementById("productModalTitle").textContent = "Add Product";
+  document.getElementById("productForm").reset();
+  document.getElementById("prodId").value = "";
+  document.getElementById("deleteProdBtn").style.display = "none";
+  document.getElementById("productModal").classList.add("open");
+}
+
+function openEditProductModal(id) {
+  const p = byId(id);
+  if (!p) return;
+  const stocks = getStocks();
+  
+  document.getElementById("productModalTitle").textContent = "Edit Product";
+  document.getElementById("prodId").value = p.id;
+  document.getElementById("prodName").value = p.name;
+  document.getElementById("prodCat").value = p.cat;
+  document.getElementById("prodSub").value = p.sub;
+  document.getElementById("prodPrice").value = p.price;
+  document.getElementById("prodMrp").value = p.mrp;
+  document.getElementById("prodMaterial").value = p.material;
+  document.getElementById("prodCollection").value = p.collection;
+  document.getElementById("prodIcon").value = p.icon || "necklace";
+  document.getElementById("prodStock").value = stocks[p.id] !== undefined ? stocks[p.id] : 10;
+  document.getElementById("prodTags").value = (p.tags || []).join(", ");
+  
+  document.getElementById("deleteProdBtn").style.display = "block";
+  document.getElementById("productModal").classList.add("open");
+}
+
+function closeProductModal() {
+  document.getElementById("productModal").classList.remove("open");
+}
+
+function submitProductForm(e) {
+  e.preventDefault();
+  const id = document.getElementById("prodId").value;
+  const name = document.getElementById("prodName").value.trim();
+  const cat = document.getElementById("prodCat").value;
+  const sub = document.getElementById("prodSub").value.trim();
+  const price = parseInt(document.getElementById("prodPrice").value);
+  const mrp = parseInt(document.getElementById("prodMrp").value);
+  const material = document.getElementById("prodMaterial").value.trim();
+  const collection = document.getElementById("prodCollection").value.trim();
+  const icon = document.getElementById("prodIcon").value;
+  const stock = parseInt(document.getElementById("prodStock").value);
+  const tagsText = document.getElementById("prodTags").value.trim();
+  const tags = tagsText ? tagsText.split(",").map(t => t.trim()) : [];
+  
+  const finalId = id || "p" + Math.floor(100 + Math.random() * 900); 
+  
+  const pObj = {
+    id: finalId,
+    name, cat, sub, price, mrp, material, collection, icon, tags,
+    rating: id ? (byId(id)?.rating || 4.7) : 5.0,
+    reviews: id ? (byId(id)?.reviews || 1) : 0,
+    bestseller: id ? (byId(id)?.bestseller || false) : false,
+    isNew: id ? (byId(id)?.isNew || false) : true
+  };
+  
+  saveProductEdit(pObj);
+  updateStock(finalId, stock);
+  
+  toast(id ? "Product updated ✓" : "Product added ✓");
+  closeProductModal();
+  renderProductsTable();
+  renderDashboard();
+}
+
+function triggerProductDelete() {
+  const id = document.getElementById("prodId").value;
+  if (!id) return;
+  
+  if (confirm("Are you sure you want to delete this product?")) {
+    deleteProduct(id);
+    toast("Product deleted");
+    closeProductModal();
+    renderProductsTable();
+    renderDashboard();
+  }
+}
+
+/* --- Coupon Modal handlers --- */
+function openAddCouponModal() {
+  document.getElementById("couponForm").reset();
+  document.getElementById("couponModal").classList.add("open");
+}
+
+function closeCouponModal() {
+  document.getElementById("couponModal").classList.remove("open");
+}
+
+function submitCouponForm(e) {
+  e.preventDefault();
+  const code = document.getElementById("coupCode").value.trim().toUpperCase();
+  const type = document.getElementById("coupType").value;
+  const value = parseInt(document.getElementById("coupValue").value);
+  const minText = document.getElementById("coupMin").value.trim();
+  const min = minText ? parseInt(minText) : null;
+  
+  const label = type === "pct" ? `${value}% off` : `₹${value} off${min ? ` on ₹${min}+` : ""}`;
+  
+  addCoupon(code, {
+    type, value, min, label
+  });
+  
+  toast(`Coupon ${code} added ✓`);
+  closeCouponModal();
+  renderCouponsTable();
+}
+</script>
+</body>
+</html>

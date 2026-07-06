@@ -65,6 +65,11 @@ function deleteProduct(id) {
 const DEFAULT_STOCKS = { p01:14, p02:22, p03:8, p04:31, p05:4, p06:11, p07:19, p08:38, p09:9, p10:6, p11:44, p12:16, p13:3, p14:52, p15:12, p16:7 };
 const getStocks = () => store.get("stocks", DEFAULT_STOCKS);
 const saveStocks = s => store.set("stocks", s);
+function updateStock(id, qty) {
+  const stocks = getStocks();
+  stocks[id] = qty;
+  saveStocks(stocks);
+}
 const decrementStocksForOrder = items => {
   const stocks = getStocks();
   items.forEach(item => {

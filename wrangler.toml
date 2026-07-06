@@ -1,2 +1,6 @@
-# wrangler.toml
-name = 'pretty-parcel-next'
+# wrangler.toml — Cloudflare Worker serving static HTML/CSS/JS assets
+name = "pretty-parcel-next"
+compatibility_date = "2026-07-06"
+
+[assets]
+directory = "."

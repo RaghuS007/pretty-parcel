@@ -3,35 +3,22 @@
    White #FFFFFF · Soft Peach #FFD6C9 · Rose Gold #E6A18B · Charcoal #2C2C2A
    ============================================================ */
 :root{
-  --white:#FFFFFF;
-  --peach:#FFD6C9;
-  --peach-soft:#FFEDE7;
-  --peach-mist:#FFF7F4;
-  --rose:#E6A18B;
-  --rose-deep:#D18A72;
-  --charcoal:#2C2C2A;
-  --ink-soft:#6B6560;
-  --line:#F1E3DC;
+  --white:#FBF7F0;
+  --peach:#E8C9A0;
+  --peach-soft:#F5E3CD;
+  --peach-mist:#FAF6EE;
+  --rose:#C9A24B;
+  --rose-deep:#7A5C3E;
+  --charcoal:#2B241C;
+  --ink-soft:#7A5C3E;
+  --line:#EADFCF;
   --radius:14px;
   --radius-sm:10px;
-  --shadow:0 10px 30px rgba(44,44,42,.07);
-  --shadow-soft:0 4px 14px rgba(230,161,139,.16);
+  --shadow:0 10px 30px rgba(43,36,28,.07);
+  --shadow-soft:0 4px 14px rgba(201,162,75,.16);
   --font-display:"Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-body:"Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
   --wrap:1180px;
-}
-body.dark-theme {
-  --white:#141312;
-  --peach:#3D2822;
-  --peach-soft:#241613;
-  --peach-mist:#1B100E;
-  --rose:#EEB6A6;
-  --rose-deep:#E09B87;
-  --charcoal:#F2EBE8;
-  --ink-soft:#A89F99;
-  --line:#362621;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --shadow-soft:0 4px 14px rgba(0,0,0,.25);
 }
 body, header, .card, .panel, footer, .kpi, .address-card, .cart-item, .summary, .auth-card, .filter-group, .accordion details, .review, .modal-content, .topbar {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -67,7 +54,7 @@ h1,h2,h3,.display{font-family:var(--font-display);font-weight:600;line-height:1.
 
 /* ---------- Header ---------- */
 .topbar{background:var(--charcoal);color:#fff;text-align:center;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;padding:8px 12px}
-header.site{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.site{position:sticky;top:0;z-index:50;background:rgba(251,247,240,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .nav{display:flex;align-items:center;gap:18px;padding:14px 20px;max-width:var(--wrap);margin:0 auto}
 .brand{font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:.02em;flex:1 1 auto;white-space:nowrap}
 .brand small{display:block;font-family:var(--font-body);font-size:9.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--rose-deep);font-weight:500;margin-top:-2px}
@@ -127,7 +114,7 @@ section.block.tint{background:var(--peach-mist)}
 .card .ph svg{width:100%;height:100%;transition:transform .5s}
 .card:hover .ph svg{transform:scale(1.05)}
 .card .flag{position:absolute;top:12px;left:12px;z-index:2}
-.card .wish{position:absolute;top:10px;right:10px;z-index:2;background:rgba(255,255,255,.92);border:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--charcoal);transition:all .2s;box-shadow:0 2px 8px rgba(44,44,42,.08)}
+.card .wish{position:absolute;top:10px;right:10px;z-index:2;background:rgba(251,247,240,.92);border:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--charcoal);transition:all .2s;box-shadow:0 2px 8px rgba(43,36,28,.08)}
 .card .wish:hover{color:var(--rose-deep);transform:scale(1.08)}
 .card .wish.on{color:var(--rose);}
 .card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
@@ -143,7 +130,7 @@ section.block.tint{background:var(--peach-mist)}
 .band{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .band a{position:relative;border-radius:var(--radius);overflow:hidden;min-height:180px;display:flex;align-items:flex-end;padding:20px;color:var(--charcoal);border:1px solid var(--line);transition:transform .25s,box-shadow .25s}
 .band a:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.band .band-label{background:rgba(255,255,255,.9);backdrop-filter:blur(4px);border-radius:10px;padding:8px 16px;font-family:var(--font-display);font-size:19px;font-weight:600}
+.band .band-label{background:rgba(251,247,240,.9);backdrop-filter:blur(4px);border-radius:10px;padding:8px 16px;font-family:var(--font-display);font-size:19px;font-weight:600}
 .band .bg{position:absolute;inset:0;z-index:-0}
 
 /* ---------- Testimonials ---------- */

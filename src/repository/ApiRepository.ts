@@ -67,7 +67,6 @@ export class ApiProductRepository implements IProductRepository {
       const res = await fetch(`${API_BASE_URL}/products?sort=popular`);
       if (!res.ok) throw new Error("Failed to fetch bestsellers");
       const data = await res.json();
-      // Bestseller products
       return (data.products || []).map(mapProduct).filter((p: Product) => p.bestseller);
     } catch (e) {
       console.error("Error in getBestsellers:", e);
@@ -86,14 +85,41 @@ export class ApiProductRepository implements IProductRepository {
       return [];
     }
   }
+
+  async updateProduct(product: Product): Promise<Product> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/products`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: product.id,
+          name: product.name,
+          pricePaise: Math.round(product.price * 100),
+          mrpPaise: Math.round(product.mrp * 100),
+          bestseller: product.bestseller,
+          isNew: product.isNew,
+          tags: product.tags,
+          material: product.material,
+          collection: product.collection
+        })
+      });
+      if (!res.ok) throw new Error("Failed to update product");
+      return product;
+    } catch (e) {
+      console.error("Error in updateProduct:", e);
+      throw e;
+    }
+  }
 }
 
 export class ApiCouponRepository implements ICouponRepository {
-  async getCoupons(): Promise<Record<string, Coupon>> {
-    // Return identical local definition (validated server-side on checkout)
+  async getCoupons(): Promise<Record<string, Coupon & { isActive?: boolean }>> {
+    // Note: When calling backend, coupons status would normally be loaded from server.
+    // For local stub fallback:
     return {
-      NEEMS10: { type: "pct", value: 10, label: "10% off" },
-      PARCEL200: { type: "flat", value: 200, min: 1499, label: "₹200 off on ₹1,499+" }
+      NEEMS10: { type: "pct", value: 10, label: "10% off", isActive: true },
+      PARCEL200: { type: "flat", value: 200, min: 1499, label: "₹200 off on ₹1,499+", isActive: true }
     };
   }
 
@@ -126,6 +152,21 @@ export class ApiCouponRepository implements ICouponRepository {
       discount,
       msg: `${cleanCode} applied — ${coupon.label} ✓`,
     };
+  }
+
+  async updateCouponActive(code: string, isActive: boolean): Promise<void> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/coupons/active`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code, isActive })
+      });
+      if (!res.ok) throw new Error("Failed to update coupon status");
+    } catch (e) {
+      console.error("Error in updateCouponActive:", e);
+      throw e;
+    }
   }
 }
 
@@ -216,6 +257,62 @@ export class ApiOrderRepository implements IOrderRepository {
       throw e;
     }
   }
+
+  async getAllOrders(): Promise<Order[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/orders`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch all orders");
+      const data = await res.json();
+      return (data.orders || []).map((o: any) => ({
+        id: o.orderNumber,
+        date: new Date(o.createdAt).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        }),
+        items: (o.items || []).map((i: any) => ({
+          id: i.id,
+          qty: i.qty,
+          price: i.unitPricePaise / 100
+        })),
+        itemCount: (o.items || []).reduce((acc: number, item: any) => acc + item.qty, 0),
+        total: o.totalPaise / 100,
+        discount: o.discountPaise / 100,
+        shippingCost: o.shippingPaise / 100,
+        shippingAddress: o.shippingAddress || {
+          id: "addr_1",
+          label: "Home",
+          name: "Customer",
+          line: "Main St",
+          city: "Mumbai",
+          state: "Maharashtra",
+          pincode: "400001",
+          phone: o.mobile,
+          isDefault: true
+        },
+        paymentMethod: o.paymentMethod || "cod",
+        status: o.status
+      }));
+    } catch (e) {
+      console.error("Error in getAllOrders:", e);
+      return [];
+    }
+  }
+
+  async updateOrderStatus(orderId: string, status: Order["status"]): Promise<void> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/orders/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ orderId, status })
+      });
+      if (!res.ok) throw new Error("Failed to update order status");
+    } catch (e) {
+      console.error("Error in updateOrderStatus:", e);
+      throw e;
+    }
+  }
 }
 
 export class ApiAuthRepository implements IAuthRepository {
@@ -256,7 +353,8 @@ export class ApiAuthRepository implements IAuthRepository {
         success: true,
         user: {
           name: data.user.name,
-          mobile: data.user.mobile
+          mobile: data.user.mobile,
+          role: data.user.role || (data.user.mobile === "9999999999" ? "admin" : "customer")
         }
       };
     } catch (e) {

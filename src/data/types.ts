@@ -31,6 +31,7 @@ export interface User {
   name: string;
   mobile: string;
   email?: string;
+  role: "customer" | "admin";
 }
 
 export interface Address {

@@ -8,7 +8,8 @@ The application supports dynamic switching between **Live API Mode** and **Offli
 
 ### 1. Offline Demo/Mock Mode (Default)
 If the environment variable `EXPO_PUBLIC_API_URL` is **unset or empty**, the application dynamically selects the mock repositories.
-- OTP code is hardcoded to `123456`.
+- Customer OTP code: `123456` (any 10-digit mobile phone starting with 6-9).
+- **Admin credentials**: Use mobile number `9999999999` and verification OTP code `123456`.
 - Data persistence is client-side only (via AsyncStorage).
 - **Production web deployment**: Deployed static builds will automatically fall back to this mode to remain functional for public demos.
 
@@ -27,16 +28,16 @@ To wire up a live production server:
 EXPO_PUBLIC_API_URL=https://your-production-domain.com/api npx expo export --platform web
 ```
 
-### Local Development Startup
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the Expo development server:
-   ```bash
-   npm run web
-   ```
+---
 
-### Production Security Guards
-For security and robustness:
-- If `EXPO_PUBLIC_API_URL` contains `localhost` or `127.0.0.1` but the build is exported for **production web deployment** (`__DEV__` is false), the app enforces **Mock Mode** automatically. This prevents production bundles from trying to access `localhost` on the client's local machine.
+## Security Architecture & Auth Reality
+
+> [!WARNING]
+> **Client-Side Authorization Limitation**:
+> Because the production web deployment is built as static client-side assets (Expo Web) hosted on Cloudflare Workers/Pages, all admin page access controls and routing guards are enforced **in-browser only**. A determined malicious actor can bypass client-side checks by modifying JavaScript execution or local state.
+>
+> **Server-Side Enforcement Directive**:
+> Once the live API backend is activated:
+> 1. Real authorization MUST be enforced on all administrative API endpoints (e.g. `/api/admin/...`) on the server.
+> 2. The server must verify user sessions and block non-admin accounts directly from accessing databases or executing mutations.
+> 3. All administrative operations in the screens are structured to flow through the repository pattern interfaces (in `src/repository`), meaning that swapping authentication to a fully secure server model will require zero changes to UI code.

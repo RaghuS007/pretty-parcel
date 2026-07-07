@@ -39,6 +39,7 @@ const MOCK_REVIEWS_CATALOG: Record<string, Review[]> = {
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { width: windowWidth } = useWindowDimensions();
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +196,6 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
   const SCREEN_WIDTH = isDesktop ? Math.min(windowWidth, 1200) / 2 : windowWidth;
 

@@ -174,6 +174,26 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
+        {/* Admin Dashboard Entry Panel */}
+        {user.role === "admin" && (
+          <Pressable
+            onPress={() => router.push("/admin" as any)}
+            style={({ pressed }) => [
+              styles.adminEntryCard,
+              pressed && styles.adminEntryCardPressed
+            ]}
+          >
+            <View style={styles.adminEntryInfo}>
+              <Feather name="shield" size={18} color={THEME.colors.primary} style={styles.adminEntryIcon} />
+              <View>
+                <Text style={styles.adminEntryTitle}>Admin Back-Office Panel</Text>
+                <Text style={styles.adminEntrySubtitle}>Manage products, orders, and active coupons</Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={16} color={THEME.colors.secondary} />
+          </Pressable>
+        )}
+
         {/* Overview KPIs metrics */}
         <View style={styles.kpiRow}>
           <View style={styles.kpiCard}>
@@ -648,5 +668,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: THEME.colors.secondary,
     lineHeight: 16,
+  },
+  adminEntryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: THEME.colors.white,
+    marginHorizontal: THEME.spacing.lg,
+    marginTop: THEME.spacing.md,
+    padding: THEME.spacing.md,
+    borderRadius: THEME.radius.md,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.primary,
+    ...THEME.shadows.card,
+  },
+  adminEntryCardPressed: {
+    backgroundColor: THEME.colors.background,
+  },
+  adminEntryInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  adminEntryIcon: {
+    marginRight: 12,
+  },
+  adminEntryTitle: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 12,
+    color: THEME.colors.text,
+  },
+  adminEntrySubtitle: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 10,
+    color: THEME.colors.secondary,
+    marginTop: 2,
   },
 });

@@ -10,6 +10,7 @@ import {
   Modal,
   Switch,
   Platform,
+  Image,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ProductRepository } from "../../src/repository";
@@ -31,6 +32,7 @@ export default function AdminProducts() {
   const [editTags, setEditTags] = useState("");
   const [editIsNew, setEditIsNew] = useState(false);
   const [editBestseller, setEditBestseller] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   const showToast = useStore((state) => state.showToast);
@@ -59,6 +61,34 @@ export default function AdminProducts() {
     setEditTags(p.tags.join(", "));
     setEditIsNew(p.isNew);
     setEditBestseller(p.bestseller);
+    setEditImageUrl(p.images && p.images.length > 0 ? p.images[0] : "");
+  };
+
+  const handleFileSelect = () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event: any) => {
+            if (event.target?.result) {
+              setEditImageUrl(event.target.result as string);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      showToast({
+        type: "info",
+        title: "Web Only",
+        message: "File selection is supported on Web. Please enter a URL on native.",
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -86,6 +116,7 @@ export default function AdminProducts() {
         isNew: editIsNew,
         bestseller: editBestseller,
         tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
+        images: editImageUrl.trim() ? [editImageUrl.trim()] : [],
       };
 
       await ProductRepository.updateProduct(updatedProduct);
@@ -219,6 +250,40 @@ export default function AdminProducts() {
                     value={editName}
                     onChangeText={setEditName}
                     placeholder="Enter name"
+                  />
+                </View>
+
+                {/* Image Edit Section */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>PRODUCT PHOTO</Text>
+                  <View style={styles.imageEditRow}>
+                    {editImageUrl ? (
+                      <Image source={{ uri: editImageUrl }} style={styles.editImagePreview} />
+                    ) : (
+                      <View style={styles.editImagePlaceholder}>
+                        <Feather name="image" size={24} color={THEME.colors.secondary} />
+                      </View>
+                    )}
+                    <View style={styles.imageActionButtons}>
+                      <Pressable onPress={handleFileSelect} style={styles.uploadBtn}>
+                        <Text style={styles.uploadBtnText}>Select Image File</Text>
+                      </Pressable>
+                      {editImageUrl ? (
+                        <Pressable onPress={() => setEditImageUrl("")} style={styles.removeBtn}>
+                          <Text style={styles.removeBtnText}>Remove</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+                  <TextInput
+                    style={[styles.formInput, { marginTop: 8 }]}
+                    value={editImageUrl.startsWith("data:") ? "[Base64 Local Image Selected]" : editImageUrl}
+                    onChangeText={(txt) => {
+                      if (!txt.startsWith("[Base64")) {
+                        setEditImageUrl(txt);
+                      }
+                    }}
+                    placeholder="Or enter image URL (http...)"
                   />
                 </View>
 
@@ -518,6 +583,58 @@ const styles = StyleSheet.create({
     borderRadius: THEME.radius.sm,
     paddingHorizontal: THEME.spacing.md,
     height: 38,
+  },
+  imageEditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: THEME.spacing.md,
+  },
+  editImagePreview: {
+    width: 60,
+    height: 60,
+    borderRadius: THEME.radius.sm,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  editImagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: THEME.radius.sm,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    backgroundColor: THEME.colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageActionButtons: {
+    flexDirection: "row",
+    gap: THEME.spacing.sm,
+  },
+  uploadBtn: {
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: THEME.radius.round,
+  },
+  uploadBtnText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 10,
+    color: THEME.colors.primary,
+  },
+  removeBtn: {
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.error,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: THEME.radius.round,
+  },
+  removeBtnText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 10,
+    color: THEME.colors.error,
   },
   rowInputs: {
     flexDirection: "row",

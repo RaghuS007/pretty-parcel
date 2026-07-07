@@ -52,7 +52,21 @@ export default function AdminLayout() {
         headerShadowVisible: true,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Admin Dashboard" }} />
+      <Stack.Screen 
+        name="index" 
+        options={{ 
+          title: "Admin Dashboard",
+          headerLeft: () => (
+            <Pressable 
+              onPress={() => router.replace("/(tabs)/account" as any)} 
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, marginRight: 10, paddingVertical: 4 }}
+            >
+              <Feather name="arrow-left" size={18} color={THEME.colors.primary} />
+              <Text style={{ fontFamily: THEME.fonts.body.semibold, fontSize: 13, color: THEME.colors.primary }}>Profile</Text>
+            </Pressable>
+          )
+        }} 
+      />
       <Stack.Screen name="products" options={{ title: "Manage Products" }} />
       <Stack.Screen name="orders" options={{ title: "Manage Orders" }} />
       <Stack.Screen name="coupons" options={{ title: "Manage Coupons" }} />

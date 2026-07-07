@@ -1,4 +1,5 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
+import { Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { THEME } from '../../src/constants/theme';
 import { useStore } from '../../src/store/useStore';
@@ -83,6 +84,21 @@ export default function TabLayout() {
           headerTitle: 'Your Account',
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" color={color} size={size - 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="product/[id]"
+        options={{
+          href: null,
+          title: "Product Details",
+          headerTitle: "Product Details",
+          headerTintColor: THEME.colors.primary,
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} style={{ marginLeft: 16 }}>
+              <Feather name="arrow-left" size={22} color={THEME.colors.primary} />
+            </Pressable>
           ),
         }}
       />

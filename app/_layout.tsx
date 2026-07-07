@@ -78,18 +78,6 @@ function RootLayoutNav() {
     <ThemeProvider value={appTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="product/[id]" 
-          options={{ 
-            headerShown: true, 
-            headerTitle: "",
-            headerTintColor: THEME.colors.primary,
-            headerStyle: {
-              backgroundColor: THEME.colors.background,
-            },
-            headerShadowVisible: false,
-          }} 
-        />
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Screen name="auth/otp" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />

@@ -66,22 +66,76 @@ export default function AdminProducts() {
 
   const handleFileSelect = () => {
     if (Platform.OS === "web") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (e: any) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event: any) => {
-            if (event.target?.result) {
-              setEditImageUrl(event.target.result as string);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
+      try {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (e: any) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onerror = () => {
+              showToast({
+                type: "error",
+                title: "Read Error",
+                message: "Failed to read the selected photo file.",
+              });
+            };
+            reader.onload = (event: any) => {
+              if (event.target?.result) {
+                const img = new window.Image();
+                img.onerror = () => {
+                  showToast({
+                    type: "error",
+                    title: "Load Error",
+                    message: "Selected file is not a valid image.",
+                  });
+                };
+                img.onload = () => {
+                  try {
+                    const canvas = document.createElement("canvas");
+                    const max_size = 400;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                      if (width > max_size) {
+                        height *= max_size / width;
+                        width = max_size;
+                      }
+                    } else {
+                      if (height > max_size) {
+                        width *= max_size / height;
+                        height = max_size;
+                      }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    
+                    // Compress to JPEG with 70% quality to keep size under 25KB
+                    const compressed = canvas.toDataURL("image/jpeg", 0.7);
+                    setEditImageUrl(compressed);
+                  } catch (err) {
+                    // Fallback to original base64 if canvas drawing fails
+                    setEditImageUrl(event.target.result as string);
+                  }
+                };
+                img.src = event.target.result as string;
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+      } catch (err) {
+        showToast({
+          type: "error",
+          title: "Uploader Error",
+          message: "Failed to open file dialogue on this browser.",
+        });
+      }
     } else {
       showToast({
         type: "info",

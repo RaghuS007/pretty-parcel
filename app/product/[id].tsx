@@ -6,9 +6,9 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Dimensions,
   Share,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -20,8 +20,6 @@ import { ProductImage } from "../../src/components/ProductImage";
 import { RatingStars } from "../../src/components/RatingStars";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Mock reviews generation based on product categories
 const MOCK_REVIEWS_CATALOG: Record<string, Review[]> = {
@@ -198,6 +196,10 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+  const SCREEN_WIDTH = isDesktop ? Math.min(windowWidth, 1200) / 2 : windowWidth;
+
   const discountPercent = Math.round(((product.mrp - product.price) / product.mrp) * 100);
   const reviewsList = MOCK_REVIEWS_CATALOG[product.cat] || MOCK_REVIEWS_CATALOG["demi-fine"];
   const recommendedItems = getRecommendedProducts();
@@ -205,37 +207,42 @@ export default function ProductDetailScreen() {
   return (
     <View style={styles.outerContainer}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Gallery Image Box (renders 2 mockup slides representing variants) */}
-        <View style={styles.galleryContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(e) => {
-              const offset = e.nativeEvent.contentOffset.x;
-              const index = Math.round(offset / SCREEN_WIDTH);
-              setActiveImageIndex(index);
-            }}
-            scrollEventThrottle={16}
-          >
-            <View style={styles.gallerySlide}>
-              <ProductImage product={product} width={SCREEN_WIDTH} height={SCREEN_WIDTH} variant={0} />
-            </View>
-            <View style={styles.gallerySlide}>
-              <ProductImage product={product} width={SCREEN_WIDTH} height={SCREEN_WIDTH} variant={1} />
-            </View>
-          </ScrollView>
+        <View style={[isDesktop && { flexDirection: "row", maxWidth: 1200, width: "100%", alignSelf: "center", gap: 24, padding: 24 }]}>
+          
+          {/* Left Column: Gallery Image Box */}
+          <View style={isDesktop ? { width: "50%" } : null}>
+            <View style={styles.galleryContainer}>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={(e) => {
+                  const offset = e.nativeEvent.contentOffset.x;
+                  const index = Math.round(offset / SCREEN_WIDTH);
+                  setActiveImageIndex(index);
+                }}
+                scrollEventThrottle={16}
+              >
+                <View style={[styles.gallerySlide, { width: SCREEN_WIDTH, height: SCREEN_WIDTH }]}>
+                  <ProductImage product={product} width={SCREEN_WIDTH} height={SCREEN_WIDTH} variant={0} />
+                </View>
+                <View style={[styles.gallerySlide, { width: SCREEN_WIDTH, height: SCREEN_WIDTH }]}>
+                  <ProductImage product={product} width={SCREEN_WIDTH} height={SCREEN_WIDTH} variant={1} />
+                </View>
+              </ScrollView>
 
-          {/* Dots Indicator */}
-          <View style={styles.indicatorContainer}>
-            <View style={[styles.dot, activeImageIndex === 0 && styles.activeDot]} />
-            <View style={[styles.dot, activeImageIndex === 1 && styles.activeDot]} />
+            {/* Dots Indicator */}
+            <View style={styles.indicatorContainer}>
+              <View style={[styles.dot, activeImageIndex === 0 && styles.activeDot]} />
+              <View style={[styles.dot, activeImageIndex === 1 && styles.activeDot]} />
+            </View>
           </View>
-        </View>
+          </View>
 
-        {/* Product Details Panel */}
-        <View style={styles.infoCard}>
+          {/* Right Column: Title, pricing, CTA, details */}
+          <View style={isDesktop ? { width: "50%" } : null}>
+            {/* Product Details Panel */}
+            <View style={styles.infoCard}>
           <View style={styles.metaRow}>
             <Text style={styles.categoryTag}>{product.sub}</Text>
             <Pressable onPress={handleShare} style={styles.shareBtn}>
@@ -391,7 +398,7 @@ export default function ProductDetailScreen() {
         </View>
 
         {/* Reviews list */}
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center" }]}>
           <Text style={styles.sectionTitle}>Customer Reviews</Text>
           <View style={styles.reviewsSummaryCard}>
             <Text style={styles.summaryValue}>{product.rating}</Text>
@@ -416,10 +423,12 @@ export default function ProductDetailScreen() {
             ))}
           </View>
         </View>
+        </View> {/* Close right column */}
+        </View> {/* Close split columns wrapper */}
 
         {/* "You may also love" recommendations (Scored) */}
         {recommendedItems.length > 0 && (
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center" }]}>
             <Text style={styles.sectionTitle}>You May Also Love</Text>
             <ScrollView
               horizontal
@@ -494,8 +503,7 @@ const styles = StyleSheet.create({
     borderBottomColor: THEME.colors.border,
   },
   gallerySlide: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
+    // Width and height handled dynamically in render
   },
   indicatorContainer: {
     position: "absolute",

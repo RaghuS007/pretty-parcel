@@ -7,8 +7,8 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  Dimensions,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -21,9 +21,10 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { COMPLEMENT_RULES, DEFAULT_ADDRESSES } from "../../src/data/mockProducts";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
 export default function CartScreen() {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+
   // Wizard steps: 1 = Review, 2 = Shipping, 3 = Payment
   const [step, setStep] = useState(1);
   
@@ -402,7 +403,7 @@ export default function CartScreen() {
   return (
     <View style={styles.outerContainer}>
       {/* Wizard step breadcrumbs bar */}
-      <View style={styles.stepIndicatorRow}>
+      <View style={[styles.stepIndicatorRow, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center", borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
         <View style={styles.stepCell}>
           <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]}>
             <Text style={[styles.stepNum, step >= 1 && styles.stepNumActive]}>1</Text>
@@ -431,86 +432,162 @@ export default function CartScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center" }]}
       >
         {step === 1 && (
           <>
-            {renderShippingProgressBar()}
-            {renderCartItems()}
+            {cartProducts.length === 0 ? (
+              renderCartItems()
+            ) : isDesktop ? (
+              <View style={{ flexDirection: "row", gap: 24, padding: 20, width: "100%" }}>
+                {/* Left Column: items list, shipping bar, coupon, suggestions */}
+                <View style={{ flex: 1.5, gap: 16 }}>
+                  {renderShippingProgressBar()}
+                  {renderCartItems()}
 
-            {/* Labeled Coupon Form Block */}
-            {cartProducts.length > 0 && (
-              <View style={styles.couponSection}>
-                <Text style={styles.couponHeading}>Offer Coupon Code</Text>
-                
-                {appliedCoupon ? (
-                  <View style={styles.appliedCouponBadge}>
-                    <Feather name="tag" size={14} color={THEME.colors.success} />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={styles.appliedCouponText}>
-                        {couponSuccess || `Coupon ${appliedCoupon} Active`}
+                  {/* Labeled Coupon Form Block */}
+                  <View style={styles.couponSection}>
+                    <Text style={styles.couponHeading}>Offer Coupon Code</Text>
+                    {appliedCoupon ? (
+                      <View style={styles.appliedCouponBadge}>
+                        <Feather name="tag" size={14} color={THEME.colors.success} />
+                        <View style={{ flex: 1, marginLeft: 8 }}>
+                          <Text style={styles.appliedCouponText}>
+                            {couponSuccess || `Coupon ${appliedCoupon} Active`}
+                          </Text>
+                          <Text style={styles.appliedCouponSavings}>
+                            Saved {formattedValue(couponDiscount)}
+                          </Text>
+                        </View>
+                        <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
+                          <Text style={styles.removeCouponText}>Remove</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <View style={styles.couponFormRow}>
+                        <TextInput
+                          style={styles.couponInput}
+                          placeholder="Enter Coupon (e.g. NEEMS10)"
+                          placeholderTextColor={THEME.colors.inkSoft}
+                          value={couponInput}
+                          onChangeText={setCouponInput}
+                          autoCapitalize="characters"
+                        />
+                        <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
+                          <Text style={styles.couponApplyBtnText}>Apply</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                    {couponError && (
+                      <Text style={styles.couponErrorMsg}>{couponError}</Text>
+                    )}
+                    {!appliedCoupon && (
+                      <Text style={styles.couponMutedHint}>
+                        Try code <Text style={{ fontFamily: THEME.fonts.body.semibold }}>NEEMS10</Text> (10% off) or <Text style={{ fontFamily: THEME.fonts.body.semibold }}>PARCEL200</Text>
                       </Text>
-                      <Text style={styles.appliedCouponSavings}>
-                        Saved {formattedValue(couponDiscount)}
-                      </Text>
-                    </View>
-                    <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
-                      <Text style={styles.removeCouponText}>Remove</Text>
-                    </Pressable>
+                    )}
                   </View>
-                ) : (
-                  <View style={styles.couponFormRow}>
-                    <TextInput
-                      style={styles.couponInput}
-                      placeholder="Enter Coupon (e.g. NEEMS10)"
-                      placeholderTextColor={THEME.colors.inkSoft}
-                      value={couponInput}
-                      onChangeText={setCouponInput}
-                      autoCapitalize="characters"
-                    />
-                    <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
-                      <Text style={styles.couponApplyBtnText}>Apply</Text>
-                    </Pressable>
+
+                  {/* Complete the look suggestions (PRD §8) */}
+                  {lookItems.length > 0 && (
+                    <View style={styles.lookSection}>
+                      <Text style={styles.lookTitle}>Complete The Look</Text>
+                      <Text style={styles.lookSubtitle}>Perfect complements for items in your bag</Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.lookScroll}
+                      >
+                        {lookItems.map((lookItem, index) => (
+                          <View key={lookItem.id} style={styles.lookCardWrapper}>
+                            <ProductCard product={lookItem} variant={index + 5} width={130} />
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                {/* Right Column: Order summary block */}
+                <View style={{ flex: 1, minWidth: 320 }}>
+                  {renderSummaryBlock()}
+                </View>
+              </View>
+            ) : (
+              <>
+                {renderShippingProgressBar()}
+                {renderCartItems()}
+
+                {/* Labeled Coupon Form Block */}
+                <View style={styles.couponSection}>
+                  <Text style={styles.couponHeading}>Offer Coupon Code</Text>
+                  {appliedCoupon ? (
+                    <View style={styles.appliedCouponBadge}>
+                      <Feather name="tag" size={14} color={THEME.colors.success} />
+                      <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.appliedCouponText}>
+                          {couponSuccess || `Coupon ${appliedCoupon} Active`}
+                        </Text>
+                        <Text style={styles.appliedCouponSavings}>
+                          Saved {formattedValue(couponDiscount)}
+                        </Text>
+                      </View>
+                      <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
+                        <Text style={styles.removeCouponText}>Remove</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.couponFormRow}>
+                      <TextInput
+                        style={styles.couponInput}
+                        placeholder="Enter Coupon (e.g. NEEMS10)"
+                        placeholderTextColor={THEME.colors.inkSoft}
+                        value={couponInput}
+                        onChangeText={setCouponInput}
+                        autoCapitalize="characters"
+                      />
+                      <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
+                        <Text style={styles.couponApplyBtnText}>Apply</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                  {couponError && (
+                    <Text style={styles.couponErrorMsg}>{couponError}</Text>
+                  )}
+                  {!appliedCoupon && (
+                    <Text style={styles.couponMutedHint}>
+                      Try code <Text style={{ fontFamily: THEME.fonts.body.semibold }}>NEEMS10</Text> (10% off) or <Text style={{ fontFamily: THEME.fonts.body.semibold }}>PARCEL200</Text>
+                    </Text>
+                  )}
+                </View>
+
+                {renderSummaryBlock()}
+
+                {/* Complete the look suggestions (PRD §8) */}
+                {lookItems.length > 0 && (
+                  <View style={styles.lookSection}>
+                    <Text style={styles.lookTitle}>Complete The Look</Text>
+                    <Text style={styles.lookSubtitle}>Perfect complements for items in your bag</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.lookScroll}
+                    >
+                      {lookItems.map((lookItem, index) => (
+                        <View key={lookItem.id} style={styles.lookCardWrapper}>
+                          <ProductCard product={lookItem} variant={index + 5} width={130} />
+                        </View>
+                      ))}
+                    </ScrollView>
                   </View>
                 )}
-
-                {couponError && (
-                  <Text style={styles.couponErrorMsg}>{couponError}</Text>
-                )}
-
-                {!appliedCoupon && (
-                  <Text style={styles.couponMutedHint}>
-                    Try code <Text style={{ fontFamily: THEME.fonts.body.semibold }}>NEEMS10</Text> (10% off) or <Text style={{ fontFamily: THEME.fonts.body.semibold }}>PARCEL200</Text>
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {cartProducts.length > 0 && renderSummaryBlock()}
-
-            {/* Complete the look suggestions (PRD §8) */}
-            {cartProducts.length > 0 && lookItems.length > 0 && (
-              <View style={styles.lookSection}>
-                <Text style={styles.lookTitle}>Complete The Look</Text>
-                <Text style={styles.lookSubtitle}>Perfect complements for items in your bag</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.lookScroll}
-                >
-                  {lookItems.map((lookItem, index) => (
-                    <View key={lookItem.id} style={styles.lookCardWrapper}>
-                      <ProductCard product={lookItem} variant={index + 5} width={130} />
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
+              </>
             )}
           </>
         )}
 
         {step === 2 && (
-          <View style={styles.shippingFormCard}>
+          <View style={[styles.shippingFormCard, isDesktop && { maxWidth: 600, width: "100%", alignSelf: "center", marginTop: 24 }]}>
             <Text style={styles.formTitle}>Shipping Details</Text>
             
             <View style={styles.inputGroup}>
@@ -588,7 +665,7 @@ export default function CartScreen() {
         )}
 
         {step === 3 && (
-          <View style={styles.paymentSection}>
+          <View style={[styles.paymentSection, isDesktop && { maxWidth: 600, width: "100%", alignSelf: "center", marginTop: 24 }]}>
             <Text style={styles.formTitle}>Choose Payment Method</Text>
             
             {/* COD Option */}
@@ -651,7 +728,7 @@ export default function CartScreen() {
 
       {/* Sticky Bottom Action Buttons Footer */}
       {cartProducts.length > 0 && (
-        <View style={styles.stickyCheckoutFooter}>
+        <View style={[styles.stickyCheckoutFooter, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center", borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
           {step === 1 && (
             <View style={styles.footerSummaryRow}>
               <View>
@@ -1196,7 +1273,7 @@ const styles = StyleSheet.create({
   stickyCheckoutFooter: {
     position: "absolute",
     bottom: 0,
-    width: SCREEN_WIDTH,
+    width: "100%",
     backgroundColor: THEME.colors.white,
     borderTopWidth: 1,
     borderTopColor: THEME.colors.border,

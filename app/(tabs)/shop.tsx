@@ -8,8 +8,8 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  Dimensions,
   FlatList,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
@@ -19,8 +19,6 @@ import { THEME } from "../../src/constants/theme";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { CATEGORIES } from "../../src/data/mockProducts";
-
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -46,6 +44,12 @@ const COLLECTIONS = [
 
 export default function ShopScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+  const numColumns = isDesktop ? 4 : 2;
+  const cardWidth = isDesktop
+    ? (Math.min(windowWidth, THEME.layout.maxWidth) - THEME.spacing.lg * 5) / 4
+    : (windowWidth - THEME.spacing.lg * 3) / 2;
   
   // Data State
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -158,7 +162,7 @@ export default function ShopScreen() {
   return (
     <View style={styles.container}>
       {/* Search Header Row */}
-      <View style={styles.searchBarRow}>
+      <View style={[styles.searchBarRow, isDesktop && { maxWidth: THEME.layout.maxWidth, width: '100%', alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
         <View style={styles.searchContainer}>
           <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
           <TextInput
@@ -173,7 +177,7 @@ export default function ShopScreen() {
       </View>
 
       {/* Control Buttons (Sort & Filter Drawer togglers) */}
-      <View style={styles.controlRow}>
+      <View style={[styles.controlRow, isDesktop && { maxWidth: THEME.layout.maxWidth, width: '100%', alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
         <Pressable
           onPress={() => setIsSortOpen(true)}
           style={({ pressed }) => [styles.controlBtn, pressed && styles.controlBtnPressed]}
@@ -202,13 +206,14 @@ export default function ShopScreen() {
 
       {/* Products Grid list */}
       <FlatList
+        key={isDesktop ? "desktop-grid" : "mobile-grid"}
         data={sortedProducts}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <ProductCard product={item} variant={index} />
+          <ProductCard product={item} variant={index} width={cardWidth} />
         )}
-        numColumns={2}
-        contentContainerStyle={styles.listContent}
+        numColumns={numColumns}
+        contentContainerStyle={[styles.listContent, isDesktop && { maxWidth: THEME.layout.maxWidth, width: "100%", alignSelf: "center" }]}
         columnWrapperStyle={styles.listColumnWrapper}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -235,10 +240,10 @@ export default function ShopScreen() {
         animationType="slide"
         onRequestClose={() => setIsSortOpen(false)}
       >
-        <View style={styles.modalBg}>
-          <Pressable style={styles.modalDismissOverlay} onPress={() => setIsSortOpen(false)} />
-          <View style={styles.sortSheetContent}>
-            <View style={styles.sheetHeader}>
+        <View style={[styles.modalBg, isDesktop && { justifyContent: "center", padding: 20 }]}>
+        <Pressable style={styles.modalDismissOverlay} onPress={() => setIsSortOpen(false)} />
+        <View style={[styles.sortSheetContent, isDesktop && { maxWidth: 500, width: "100%", borderRadius: THEME.radius.lg, overflow: "hidden" }]}>
+          <View style={styles.sheetHeader}>
               <Text style={styles.sheetHeaderTitle}>Sort By</Text>
               <Pressable onPress={() => setIsSortOpen(false)}>
                 <Feather name="x" size={18} color={THEME.colors.text} />
@@ -280,11 +285,11 @@ export default function ShopScreen() {
         animationType="slide"
         onRequestClose={() => setIsFilterOpen(false)}
       >
-        <View style={styles.modalBg}>
-          <Pressable style={styles.modalDismissOverlay} onPress={() => setIsFilterOpen(false)} />
-          <View style={styles.filterSheetContent}>
-            {/* Header */}
-            <View style={styles.sheetHeader}>
+        <View style={[styles.modalBg, isDesktop && { justifyContent: "center", padding: 20 }]}>
+        <Pressable style={styles.modalDismissOverlay} onPress={() => setIsFilterOpen(false)} />
+        <View style={[styles.filterSheetContent, isDesktop && { maxWidth: 500, width: "100%", height: Math.min(550, windowHeight * 0.8), borderRadius: THEME.radius.lg, overflow: "hidden" }]}>
+          {/* Header */}
+          <View style={styles.sheetHeader}>
               <Text style={styles.sheetHeaderTitle}>Filters</Text>
               <View style={styles.sheetActionsRow}>
                 <Pressable onPress={handleResetFilters} style={styles.resetLink}>
@@ -543,7 +548,7 @@ const styles = StyleSheet.create({
     color: THEME.colors.primary,
   },
   filterSheetContent: {
-    height: SCREEN_HEIGHT * 0.75,
+    height: 500,
     backgroundColor: THEME.colors.background,
     borderTopLeftRadius: THEME.radius.xl,
     borderTopRightRadius: THEME.radius.xl,

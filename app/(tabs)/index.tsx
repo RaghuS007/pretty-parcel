@@ -7,8 +7,8 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  Dimensions,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -20,8 +20,6 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { ProductImage } from "../../src/components/ProductImage";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
 export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +29,26 @@ export default function HomeScreen() {
   // Read recently viewed IDs from store
   const recentlyViewedIds = useStore((state) => state.recentlyViewed);
   const clearViewed = useStore((state) => state.clearViewed);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+
+  // Responsive card width for Best Sellers (4 columns on PC, 2 columns on mobile)
+  const cardWidth = isDesktop
+    ? (Math.min(windowWidth, THEME.layout.maxWidth) - THEME.spacing.lg * 5) / 4
+    : (windowWidth - THEME.spacing.lg * 3) / 2;
+
+  // Testimonial card width
+  const testimonialWidth = isDesktop ? 600 : windowWidth - THEME.spacing.lg * 2;
+
+  // Instagram cell size
+  const instaCellSize = isDesktop
+    ? 180
+    : (windowWidth - THEME.spacing.lg * 2 - 24) / 4;
+
+  const contentMaxWidthStyle = isDesktop
+    ? { maxWidth: THEME.layout.maxWidth, width: "100%" as const, alignSelf: "center" as const }
+    : null;
 
   // Fetch products catalog on mount
   useEffect(() => {
@@ -92,6 +110,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={contentMaxWidthStyle}>
         {/* Branding Header Area */}
         <View style={styles.brandHeader}>
           <Text style={styles.brandTitle}>The Pretty Parcel</Text>
@@ -191,7 +210,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Best Sellers</Text>
             <View style={styles.gridContainer}>
               {bestSellers.map((product, index) => (
-                <ProductCard key={product.id} product={product} variant={index} />
+                <ProductCard key={product.id} product={product} variant={index} width={cardWidth} />
               ))}
             </View>
           </View>
@@ -270,7 +289,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.testimonialsContainer}
           >
-            <View style={styles.testimonialCard}>
+            <View style={[styles.testimonialCard, { width: testimonialWidth }]}>
               <View style={styles.quoteIcon}>
                 <Feather name="message-circle" size={24} color={THEME.colors.primary} />
               </View>
@@ -280,7 +299,7 @@ export default function HomeScreen() {
               <Text style={styles.testimonialAuthor}>— Riya K., Bangalore</Text>
             </View>
 
-            <View style={styles.testimonialCard}>
+            <View style={[styles.testimonialCard, { width: testimonialWidth }]}>
               <View style={styles.quoteIcon}>
                 <Feather name="message-circle" size={24} color={THEME.colors.primary} />
               </View>
@@ -297,19 +316,19 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitleCenter}>Follow Us On Instagram</Text>
           <Text style={styles.instaHandle}>@theprettyparcel.neems</Text>
           <View style={styles.instaGrid}>
-            <View style={styles.instaCell}>
+            <View style={[styles.instaCell, { width: instaCellSize, height: instaCellSize }]}>
               <View style={[styles.instaPlaceholder, { backgroundColor: "#F7E3DA" }]} />
               <Feather name="instagram" size={16} color={THEME.colors.text} style={styles.instaIcon} />
             </View>
-            <View style={styles.instaCell}>
+            <View style={[styles.instaCell, { width: instaCellSize, height: instaCellSize }]}>
               <View style={[styles.instaPlaceholder, { backgroundColor: "#E9DED8" }]} />
               <Feather name="instagram" size={16} color={THEME.colors.text} style={styles.instaIcon} />
             </View>
-            <View style={styles.instaCell}>
+            <View style={[styles.instaCell, { width: instaCellSize, height: instaCellSize }]}>
               <View style={[styles.instaPlaceholder, { backgroundColor: "#FFE9E0" }]} />
               <Feather name="instagram" size={16} color={THEME.colors.text} style={styles.instaIcon} />
             </View>
-            <View style={styles.instaCell}>
+            <View style={[styles.instaCell, { width: instaCellSize, height: instaCellSize }]}>
               <View style={[styles.instaPlaceholder, { backgroundColor: "#FBF7F0" }]} />
               <Feather name="instagram" size={16} color={THEME.colors.text} style={styles.instaIcon} />
             </View>
@@ -345,6 +364,7 @@ export default function HomeScreen() {
           <Text style={styles.footerBrand}>The Pretty Parcel by Neems</Text>
           <Text style={styles.footerText}>Handcrafted Demi-Fine & Fashion Jewelry.</Text>
           <Text style={styles.footerText}>Made with 🤍 in Bengaluru, India.</Text>
+        </View>
         </View>
       </ScrollView>
 
@@ -571,7 +591,7 @@ const styles = StyleSheet.create({
     paddingTop: THEME.spacing.lg,
   },
   testimonialCard: {
-    width: SCREEN_WIDTH - THEME.spacing.lg * 2,
+    // Width is set dynamically via inline style
     alignItems: "center",
     paddingHorizontal: THEME.spacing.lg,
   },
@@ -607,8 +627,7 @@ const styles = StyleSheet.create({
   },
   instaCell: {
     position: "relative",
-    width: (SCREEN_WIDTH - THEME.spacing.lg * 2 - 24) / 4,
-    height: (SCREEN_WIDTH - THEME.spacing.lg * 2 - 24) / 4,
+    // Width and height are set dynamically via inline style
     borderRadius: THEME.radius.sm,
     overflow: "hidden",
     borderWidth: 1,

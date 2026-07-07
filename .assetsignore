@@ -1,6 +1,0 @@
-.git
-.git/**
-.wrangler
-.wrangler/**
-*.toml
-README.md

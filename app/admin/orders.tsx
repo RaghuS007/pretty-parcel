@@ -168,18 +168,16 @@ export default function AdminOrders() {
                   pressed && styles.actionBtnPressed,
                   isUpdating && { opacity: 0.7 }
                 ]}
-              >
-                {isUpdating ? (
-                  <ActivityIndicator size="small" color={THEME.colors.white} />
-                ) : (
-                  <>
-                    <Text style={styles.actionBtnText}>
-                      Mark as {getStatusLabelAndColor(nextStatus).label}
-                    </Text>
-                    <Feather name="arrow-right" size={12} color={THEME.colors.white} />
-                  </>
-                )}
-              </Pressable>
+              >{isUpdating ? (
+                <ActivityIndicator size="small" color={THEME.colors.white} />
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.actionBtnText}>
+                    Mark as {getStatusLabelAndColor(nextStatus).label}
+                  </Text>
+                  <Feather name="arrow-right" size={12} color={THEME.colors.white} />
+                </View>
+              )}</Pressable>
             )}
           </View>
         );

@@ -7,7 +7,7 @@ import { IProductRepository, ICouponRepository, IOrderRepository, IAuthRepositor
  * - false: Runs locally using client-side mock data (MOCK_PRODUCTS).
  * - true: Runs against Next.js production backend API (pointing to API_BASE_URL).
  */
-const USE_LIVE_API = false;
+const USE_LIVE_API = true;
 
 export const ProductRepository: IProductRepository = USE_LIVE_API
   ? new ApiProductRepository()

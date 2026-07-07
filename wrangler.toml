@@ -2,5 +2,8 @@
 name = "pretty-parcel-next"
 compatibility_date = "2026-07-06"
 
+[build]
+command = "pnpm build"
+
 [assets]
 directory = "dist"

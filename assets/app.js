@@ -235,6 +235,7 @@ function toast(msg) {
 }
 
 /* ---------------- shared chrome ---------------- */
+/* ---------------- shared chrome ---------------- */
 function renderHeader(active) {
   const u = getUser();
   document.getElementById("siteHeader").innerHTML = `
@@ -252,7 +253,6 @@ function renderHeader(active) {
       <a href="admin.html">Admin</a>
     </div>
     <div class="nav-icons">
-      <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme" title="Toggle Light/Dark Theme"></button>
       <a class="icon-btn" href="${u ? "account.html" : "login.html"}" aria-label="Account" title="${u ? "Hi, " + u.name.split(" ")[0] : "Login"}">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg></a>
       <a class="icon-btn" href="account.html#wishlist" aria-label="Wishlist">
@@ -264,7 +264,6 @@ function renderHeader(active) {
     </div>
   </nav></header>`;
   updateBadges();
-  updateThemeToggleIcon();
 }
 function renderFooter() {
   const f = document.getElementById("siteFooter");
@@ -279,14 +278,18 @@ function renderFooter() {
       <li><a href="shop.html?cat=hair">Hair Accessories</a></li>
       <li><a href="shop.html">All Products</a></li></ul></div>
     <div><h4>Help</h4><ul>
+      <li><a href="#" onclick="event.preventDefault(); openSupportDrawer();">Customer Support Chat</a></li>
       <li><a href="#">Shipping &amp; Returns</a></li><li><a href="#">Care Guide</a></li>
-      <li><a href="#">Privacy Policy</a></li><li><a href="#">Terms &amp; Conditions</a></li></ul></div>
+      <li><a href="#">Privacy Policy</a></li></ul></div>
     <div><h4>Get in touch</h4><ul>
       <li>theprettyparcelbyneems@gmail.com</li><li>+91 79753 81312</li>
       <li><a href="#">Instagram</a> · <a href="#">Facebook</a></li></ul></div>
   </div><div class="footnote">© 2026 The Pretty Parcel by Neems · Bengaluru, India</div></footer>
-  <a class="wa-float" href="https://wa.me/917975381312" aria-label="Chat on WhatsApp" target="_blank" rel="noopener">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.2-.7-2.7-1.1-4.4-3.9-4.6-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 .9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.7.3.2.5.1.7-.1l1-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.6.4 0 .1 0 .7-.3 1.3z"/></svg></a>`;
+  <button class="support-float" id="supportFloatBtn" onclick="openSupportDrawer()" aria-label="Customer Support" title="Help & Support">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  </button>`;
 }
 
 /* ---------------- recently viewed strip ---------------- */
@@ -310,22 +313,146 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* ---------------- theme support ---------------- */
 function initTheme() {
-  const theme = store.get("theme", "light");
-  document.body.classList.toggle("dark-theme", theme === "dark");
-  updateThemeToggleIcon();
+  // Force Light Mode only
+  document.body.classList.remove("dark-theme");
+  store.set("theme", "light");
 }
-function toggleTheme() {
-  const isDark = document.body.classList.toggle("dark-theme");
-  store.set("theme", isDark ? "dark" : "light");
-  updateThemeToggleIcon();
+function toggleTheme() {}
+function updateThemeToggleIcon() {}
+
+/* ---------------- customer support drawer ---------------- */
+function initSupportDrawer() {
+  if (document.getElementById("supportDrawerOverlay")) return;
+  
+  const overlay = document.createElement("div");
+  overlay.id = "supportDrawerOverlay";
+  overlay.className = "support-drawer-overlay";
+  overlay.onclick = closeSupportDrawer;
+  
+  const drawer = document.createElement("div");
+  drawer.id = "supportDrawer";
+  drawer.className = "support-drawer";
+  
+  drawer.innerHTML = `
+    <div class="support-drawer-header">
+      <div>
+        <h2>Help &amp; Support</h2>
+        <p>Typically replies instantly</p>
+      </div>
+      <button class="support-drawer-close" onclick="closeSupportDrawer()" aria-label="Close support">&times;</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-quick-replies" id="chatQuickReplies">
+      <button class="quick-reply-btn" onclick="handleQuickReply('Where is my order?')">Track Order</button>
+      <button class="quick-reply-btn" onclick="handleQuickReply('What are the shipping charges?')">Shipping Rates</button>
+      <button class="quick-reply-btn" onclick="handleQuickReply('What is the return policy?')">Returns Info</button>
+      <button class="quick-reply-btn" onclick="handleQuickReply('How do I care for my jewellery?')">Care Guide</button>
+      <button class="quick-reply-btn" onclick="handleQuickReply('Talk to a human')">Talk to a Human</button>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendUserChatMessage()">
+      <button class="chat-send-btn" onclick="sendUserChatMessage()" aria-label="Send message">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  document.body.appendChild(drawer);
 }
-function updateThemeToggleIcon() {
-  const btn = document.getElementById("themeToggleBtn");
-  if (!btn) return;
-  const isDark = document.body.classList.contains("dark-theme");
-  btn.innerHTML = isDark 
-    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>` // Sun
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`; // Moon
+
+function openSupportDrawer() {
+  initSupportDrawer();
+  document.getElementById("supportDrawerOverlay").classList.add("open");
+  document.getElementById("supportDrawer").classList.add("open");
+  if (!document.querySelector("#chatMessages .chat-bubble")) {
+    renderInitialSupportMessages();
+  }
+}
+
+function closeSupportDrawer() {
+  const overlay = document.getElementById("supportDrawerOverlay");
+  const drawer = document.getElementById("supportDrawer");
+  if (overlay) overlay.classList.remove("open");
+  if (drawer) drawer.classList.remove("open");
+}
+
+function renderInitialSupportMessages() {
+  const chatMessages = document.getElementById("chatMessages");
+  if (!chatMessages) return;
+  chatMessages.innerHTML = `
+    <div class="chat-bubble bot">
+      Hi there! Welcome to <strong>The Pretty Parcel by Neems</strong>. How can we help you today?
+    </div>
+  `;
+}
+
+function addChatMessage(sender, text) {
+  const chatMessages = document.getElementById("chatMessages");
+  if (!chatMessages) return;
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${sender}`;
+  bubble.innerHTML = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendUserChatMessage() {
+  const input = document.getElementById("chatInput");
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  addChatMessage("user", text);
+  input.value = "";
+  showBotTypingAndReply(text);
+}
+
+function handleQuickReply(option) {
+  addChatMessage("user", option);
+  showBotTypingAndReply(option);
+}
+
+function showBotTypingAndReply(userMessage) {
+  const chatMessages = document.getElementById("chatMessages");
+  if (!chatMessages) return;
+  
+  const typing = document.createElement("div");
+  typing.className = "chat-bubble bot typing-indicator";
+  typing.innerHTML = `<span style="display:inline-flex;gap:4px;"><span class="dot" style="animation: typing-dot 1.2s infinite; width:6px; height:6px; background:#6b6560; border-radius:50%"></span><span class="dot" style="animation: typing-dot 1.2s infinite 0.2s; width:6px; height:6px; background:#6b6560; border-radius:50%"></span><span class="dot" style="animation: typing-dot 1.2s infinite 0.4s; width:6px; height:6px; background:#6b6560; border-radius:50%"></span></span>`;
+  chatMessages.appendChild(typing);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  if (!document.getElementById("typing-dot-style")) {
+    const style = document.createElement("style");
+    style.id = "typing-dot-style";
+    style.innerHTML = `@keyframes typing-dot { 0%, 100% { opacity: 0.2; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }`;
+    document.head.appendChild(style);
+  }
+
+  setTimeout(() => {
+    typing.remove();
+    let botReply = "";
+    const msg = userMessage.toLowerCase();
+    
+    if (msg.includes("order") || msg.includes("track")) {
+      botReply = "You can view your order history and track active shipments under the **Orders** tab on your <a href='account.html#orders'>Account Page</a>. All shipments are dispatched within 24-48 hours!";
+    } else if (msg.includes("shipping") || msg.includes("charge") || msg.includes("delivery") || msg.includes("rate")) {
+      botReply = "We offer **Free Shipping** pan-India for all orders of **₹999 and above**. For orders below ₹999, a flat shipping charge of ₹79 is applied at checkout. Delivery typically takes 3 to 5 business days.";
+    } else if (msg.includes("return") || msg.includes("refund") || msg.includes("cancel")) {
+      botReply = "We offer a hassle-free **7-day return policy** on all unused items in their original packaging. To request a return or exchange, please email us at **theprettyparcelbyneems@gmail.com** or send a request from your orders portal.";
+    } else if (msg.includes("care") || msg.includes("material") || msg.includes("tarnish")) {
+      botReply = "Our products are curated premium pieces (such as 18k rose-gold plating or German silver). To preserve their shine, keep them dry and store them in airtight containers. Avoid perfume, lotion, and water contact.";
+    } else if (msg.includes("human") || msg.includes("agent") || msg.includes("person") || msg.includes("speak") || msg.includes("support")) {
+      botReply = "A customer support specialist has been alerted and will reach out to you via your registered phone number or email shortly! You can also contact us directly at **+91 79753 81312**.";
+    } else {
+      botReply = "Thank you for message! I'm your digital assistant. You can ask about:<br>• **Track Order** (order status)<br>• **Shipping Rates** (costs & speed)<br>• **Returns Info** (exchange policy)<br>• **Care Guide** (jewelry upkeep)<br>• **Talk to a Human** (speak with an agent)";
+    }
+    
+    addChatMessage("bot", botReply);
+  }, 1000);
 }
 
 /* ---------------- cart drawer ---------------- */

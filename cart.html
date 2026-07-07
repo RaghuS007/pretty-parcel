@@ -109,22 +109,7 @@ function renderCartPage() {
         </div>
 
         <aside class="summary">
-          <h3>Order Summary</h3>
-          <div class="coupon-row">
-            <input id="couponInput" placeholder="Coupon code" value="${appliedCoupon || ""}" aria-label="Coupon code">
-            <button class="btn btn-ghost btn-sm" onclick="applyCoupon()">Apply</button>
-          </div>
-          ${couponMsg}
-          <div class="sum-row"><span>Subtotal</span><span>${INR(subtotal)}</span></div>
-          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
-          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free ✓"}</span></div>
-          ${shipping ? `<div class="sum-row" style="font-size:12px;color:var(--rose-deep)"><span>Add ${INR(999 - (subtotal - discount))} more for free shipping</span><span></span></div>` : ""}
-          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
-          <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="goToStep(2)">Proceed to Shipping</button>
-          <div class="pay-methods">
-            <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Paytm</span><span>Visa</span><span>Mastercard</span><span>RuPay</span><span>Net Banking</span>
-          </div>
-          <p style="font-size:11.5px;color:var(--ink-soft);margin-top:12px">🔒 100% secure payments · Gift-wrapped free · COD available</p>
+          ${renderSummarySidebar(1, subtotal, discount, shipping, total, appliedCoupon, couponMsg, ids)}
         </aside>
       </div>
     `;
@@ -221,11 +206,7 @@ function renderCartPage() {
         </div>
 
         <aside class="summary">
-          <h3>Order Details</h3>
-          <div class="sum-row"><span>Items (${ids.length})</span><span>${INR(subtotal)}</span></div>
-          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
-          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free"}</span></div>
-          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+          ${renderSummarySidebar(2, subtotal, discount, shipping, total, appliedCoupon, couponMsg, ids)}
         </aside>
       </div>
     `;
@@ -291,16 +272,7 @@ function renderCartPage() {
         </div>
 
         <aside class="summary">
-          <h3>Order Details</h3>
-          <div style="font-size:13px; color:var(--ink-soft); margin-bottom:14px; text-align:left; border-bottom:1px solid var(--line); padding-bottom:10px; line-height: 1.5;">
-            <strong style="color:var(--charcoal); font-size: 13.5px;">Shipping Address:</strong><br>
-            ${checkoutAddress?.name}<br>
-            ${checkoutAddress?.line}, ${checkoutAddress?.city} - ${checkoutAddress?.pincode}
-          </div>
-          <div class="sum-row"><span>Items</span><span>${INR(subtotal)}</span></div>
-          ${discount ? `<div class="sum-row"><span>Coupon discount</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
-          <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free"}</span></div>
-          <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+          ${renderSummarySidebar(3, subtotal, discount, shipping, total, appliedCoupon, couponMsg, ids)}
         </aside>
       </div>
     `;
@@ -311,12 +283,80 @@ function changeQty(id, d) { const c = getCart(); c[id] = Math.max(1, (c[id] || 1
 function removeItem(id) { const c = getCart(); delete c[id]; setCart(c); renderCartPage(); toast("Removed from cart"); }
 
 function applyCoupon() {
-  const code = document.getElementById("couponInput").value.trim().toUpperCase();
-  if (!code) { appliedCoupon = null; store.set("coupon", null); renderCartPage(); return; }
+  const input = document.getElementById("couponInput");
+  if (!input) return;
+  const code = input.value.trim().toUpperCase();
+  if (!code) {
+    appliedCoupon = null;
+    store.set("coupon", null);
+    renderCartPage();
+    return;
+  }
   const COUPONS = getCoupons();
-  if (COUPONS[code]) { appliedCoupon = code; store.set("coupon", code); toast("Coupon applied ✓"); }
-  else toast("Hmm, that code isn't valid");
+  if (COUPONS[code]) {
+    appliedCoupon = code;
+    store.set("coupon", code);
+    toast("Coupon applied ✓");
+  } else {
+    toast("Hmm, that code isn't valid");
+  }
   renderCartPage();
+}
+function removeCoupon() {
+  appliedCoupon = null;
+  store.set("coupon", null);
+  toast("Coupon removed");
+  renderCartPage();
+}
+function renderSummarySidebar(step, subtotal, discount, shipping, total, appliedCoupon, couponMsg, ids) {
+  const hasError = couponMsg.includes("class=\"coupon-msg err\"") || couponMsg.includes("err");
+  const isAppliedAndValid = appliedCoupon && !hasError;
+  const couponSectionHTML = `
+    <div class="coupon-section" style="margin-bottom: 20px; border-bottom: 1px dashed var(--line); padding-bottom: 16px;">
+      <label for="couponInput" style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:var(--rose-deep); margin-bottom:6px;">Enter Coupon Code</label>
+      <div class="coupon-row" style="display:flex; gap:8px; margin: 8px 0;">
+        <input id="couponInput" placeholder="Coupon code" value="${appliedCoupon || ""}" style="flex:1; border:1.5px solid var(--line); border-radius:999px; padding:10px 16px; font-family:inherit; font-size:13px; text-transform:uppercase; outline:none; background:var(--white);" onkeydown="if(event.key==='Enter')applyCoupon()">
+        <button class="btn btn-ghost btn-sm" onclick="applyCoupon()" style="padding:0 18px; border-radius:999px;">Apply</button>
+      </div>
+      ${couponMsg}
+      ${isAppliedAndValid ? `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; background:rgba(46,125,82,0.08); padding:8px 12px; border-radius:8px; font-size:12.5px; border: 1px solid rgba(46,125,82,0.15);">
+          <span style="color:#2E7D52; font-weight:600;">✓ Active: ${appliedCoupon}</span>
+          <button onclick="removeCoupon()" style="background:none; border:none; color:var(--rose-deep); font-size:11.5px; text-decoration:underline; font-weight:500; cursor:pointer;">Remove</button>
+        </div>
+      ` : ""}
+    </div>
+  `;
+  let html = `
+    <h3>${step === 1 ? "Order Summary" : "Order Details"}</h3>
+  `;
+  if (step === 3 && checkoutAddress) {
+    html += `
+      <div style="font-size:13px; color:var(--ink-soft); margin-bottom:14px; text-align:left; border-bottom:1px solid var(--line); padding-bottom:10px; line-height: 1.5;">
+        <strong style="color:var(--charcoal); font-size: 13.5px;">Shipping Address:</strong><br>
+        ${checkoutAddress.name}<br>
+        ${checkoutAddress.line}, ${checkoutAddress.city} - ${checkoutAddress.pincode}
+      </div>
+    `;
+  }
+  html += couponSectionHTML;
+  html += `
+    <div class="sum-row"><span>Items (${ids.length})</span><span>${INR(subtotal)}</span></div>
+    ${discount ? `<div class="sum-row"><span>Discount (${appliedCoupon})</span><span style="color:#2E7D52">− ${INR(discount)}</span></div>` : ""}
+    <div class="sum-row"><span>Shipping</span><span>${shipping ? INR(shipping) : "Free ✓"}</span></div>
+    ${shipping ? `<div class="sum-row" style="font-size:12px;color:var(--rose-deep)"><span>Add ${INR(999 - (subtotal - discount))} more for free shipping</span><span></span></div>` : ""}
+    <div class="sum-row total"><span>Total</span><span>${INR(total)}</span></div>
+  `;
+  if (step === 1) {
+    html += `
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="goToStep(2)">Proceed to Shipping</button>
+      <div class="pay-methods">
+        <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Paytm</span><span>Visa</span><span>Mastercard</span><span>RuPay</span><span>Net Banking</span>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin-top:12px">🔒 100% secure payments · Gift-wrapped free · COD available</p>
+    `;
+  }
+  return html;
 }
 
 function triggerShippingSubmit() {

@@ -6,16 +6,28 @@ import { useStore } from "../../src/store/useStore";
 import { THEME } from "../../src/constants/theme";
 
 export default function AdminLayout() {
+  const [hydrated, setHydrated] = React.useState(false);
   const user = useStore((state) => state.user);
 
-  // If not logged in, redirect to login page
   React.useEffect(() => {
-    if (!user) {
+    if (useStore.persist.hasHydrated()) {
+      setHydrated(true);
+    } else {
+      const unsub = useStore.persist.onFinishHydration(() => {
+        setHydrated(true);
+      });
+      return unsub;
+    }
+  }, []);
+
+  // If not logged in, redirect to login page (wait until store is hydrated)
+  React.useEffect(() => {
+    if (hydrated && !user) {
       router.replace("/auth/login");
     }
-  }, [user]);
+  }, [hydrated, user]);
 
-  if (!user) {
+  if (!hydrated || !user) {
     return null;
   }
 

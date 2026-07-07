@@ -89,7 +89,8 @@ function RootLayoutNav() {
             headerShadowVisible: false,
           }} 
         />
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/otp" options={{ headerShown: false }} />
         <Stack.Screen name="checkout/success" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>

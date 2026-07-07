@@ -91,7 +91,7 @@ export default function AccountScreen() {
 
   const AlertLogoutSuccess = () => {
     // Standard react-native Alert works, but since we are returning a mock clean logout:
-    router.replace("/(tabs)/index");
+    router.replace("/");
   };
 
   if (loading) {

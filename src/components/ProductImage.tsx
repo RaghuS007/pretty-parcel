@@ -194,7 +194,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
         <Circle cx={95 - shift} cy={22 + shift} r={30} fill="rgba(255, 255, 255, 0.25)" />
         
         {/* Center line art graphic */}
-        <G stroke="#2C2C2A" fill="#2C2C2A" rotation={rotateVal} origin="60, 60">
+        <G stroke="#2C2C2A" fill="#2C2C2A" transform={`rotate(${rotateVal} 60 60)`}>
           {renderIcon(product.icon)}
         </G>
       </Svg>

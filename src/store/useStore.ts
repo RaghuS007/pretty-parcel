@@ -3,6 +3,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, Order } from "../data/types";
 
+export interface ToastMessage {
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+}
+
 interface CartState {
   cart: Record<string, number>; // Maps productId -> quantity
   addToCart: (productId: string, qty?: number) => void;
@@ -40,7 +46,18 @@ interface CouponState {
   setAppliedCoupon: (code: string | null) => void;
 }
 
-type StoreState = CartState & WishlistState & RecentlyViewedState & AuthState & OrdersState & CouponState;
+interface ToastState {
+  toast: ToastMessage | null;
+  showToast: (toast: ToastMessage | null) => void;
+}
+
+type StoreState = CartState &
+  WishlistState &
+  RecentlyViewedState &
+  AuthState &
+  OrdersState &
+  CouponState &
+  ToastState;
 
 export const useStore = create<StoreState>()(
   persist(
@@ -124,10 +141,19 @@ export const useStore = create<StoreState>()(
       // --- Coupon ---
       appliedCoupon: null,
       setAppliedCoupon: (code) => set({ appliedCoupon: code }),
+
+      // --- Toast (Not persisted) ---
+      toast: null,
+      showToast: (toast) => set({ toast }),
     }),
     {
       name: "pretty-parcel-store",
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => {
+        // Exclude toast from persistence storage to avoid popups on app launch
+        const { toast, ...rest } = state;
+        return rest;
+      },
     }
   )
 );

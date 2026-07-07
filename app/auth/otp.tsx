@@ -6,12 +6,11 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  Alert,
   Keyboard,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import { AuthRepository, OrderRepository } from "../../src/repository";
+import { AuthRepository, OrderRepository, USE_LIVE_API } from "../../src/repository";
 import { THEME } from "../../src/constants/theme";
 import { useStore } from "../../src/store/useStore";
 
@@ -36,6 +35,7 @@ export default function OtpScreen() {
   // Store actions
   const setUser = useStore((state) => state.setUser);
   const setOrders = useStore((state) => state.setOrders);
+  const showToast = useStore((state) => state.showToast);
 
   // 30s Countdown timer
   useEffect(() => {
@@ -72,7 +72,11 @@ export default function OtpScreen() {
   const handleVerifyOtp = async () => {
     const otpString = code.join("");
     if (otpString.length < 6) {
-      Alert.alert("Incomplete Code", "Please enter the full 6-digit verification code.");
+      showToast({
+        type: "error",
+        title: "Incomplete Code",
+        message: "Please enter the full 6-digit verification code.",
+      });
       return;
     }
 
@@ -87,15 +91,29 @@ export default function OtpScreen() {
         setOrders(userOrders);
         
         Keyboard.dismiss();
-        Alert.alert("Success! ✨", `Welcome, ${res.user.name}!`);
+        showToast({
+          type: "success",
+          title: "Welcome! ✨",
+          message: `Logged in successfully as ${res.user.name}.`,
+        });
         
-        // Redirect to main account screen
-        router.replace("/(tabs)/account");
+        // Redirect after a 600ms delay to let the toast display
+        setTimeout(() => {
+          router.replace("/(tabs)/account");
+        }, 600);
       } else {
-        Alert.alert("Verification Failed", res.error || "Wrong OTP. Try entering 123456");
+        showToast({
+          type: "error",
+          title: "Verification Failed",
+          message: res.error || "Wrong OTP. Try entering 123456.",
+        });
       }
     } catch (err) {
-      Alert.alert("Error", "Could not verify code. Please try again.");
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Could not verify code. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -109,12 +127,24 @@ export default function OtpScreen() {
         setTimer(30);
         setCode(["", "", "", "", "", ""]);
         inputRefs[0].current?.focus();
-        Alert.alert("Code Sent", "A new OTP verification code has been sent. Demo: 123456");
+        showToast({
+          type: "success",
+          title: "Code Sent",
+          message: "A new OTP verification code has been sent. Demo: 123456.",
+        });
       } else {
-        Alert.alert("Resend Failed", res.msg);
+        showToast({
+          type: "error",
+          title: "Resend Failed",
+          message: res.msg,
+        });
       }
     } catch {
-      Alert.alert("Error", "Could not resend OTP.");
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Could not resend OTP.",
+      });
     } finally {
       setResending(false);
     }
@@ -132,6 +162,16 @@ export default function OtpScreen() {
         <Text style={styles.subtitle}>
           We've sent a 6-digit OTP verification code to +91 {mobile}. Please enter it below.
         </Text>
+
+        {/* Demo warning banner in mock mode */}
+        {!USE_LIVE_API && (
+          <View style={styles.demoBanner}>
+            <Feather name="info" size={14} color="#7A5C3E" style={styles.demoBannerIcon} />
+            <Text style={styles.demoBannerText}>
+              Demo mode — use code <Text style={styles.demoBannerBold}>123456</Text>
+            </Text>
+          </View>
+        )}
 
         {/* 6 Digit Input Row */}
         <View style={styles.otpRow}>
@@ -212,6 +252,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...THEME.shadows.card,
+    zIndex: 10,
   },
   innerCard: {
     backgroundColor: THEME.colors.white,
@@ -243,6 +284,29 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 16,
     marginBottom: THEME.spacing.xl,
+  },
+  demoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFD6C9", // Soft Peach
+    borderColor: "#E6A18B", // Rose Gold
+    borderWidth: 1.5,
+    borderRadius: THEME.radius.sm,
+    paddingVertical: THEME.spacing.sm,
+    paddingHorizontal: THEME.spacing.md,
+    marginBottom: THEME.spacing.lg,
+  },
+  demoBannerIcon: {
+    marginRight: 8,
+  },
+  demoBannerText: {
+    fontFamily: THEME.fonts.body.medium,
+    fontSize: 11,
+    color: "#2C2C2A", // Dark Charcoal
+  },
+  demoBannerBold: {
+    fontFamily: THEME.fonts.body.semibold,
+    color: "#C0533B",
   },
   otpRow: {
     flexDirection: "row",

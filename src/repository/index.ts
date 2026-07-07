@@ -1,13 +1,13 @@
 import { MockProductRepository, MockCouponRepository, MockOrderRepository, MockAuthRepository } from "./MockRepository";
 import { ApiProductRepository, ApiCouponRepository, ApiOrderRepository, ApiAuthRepository } from "./ApiRepository";
 import { IProductRepository, ICouponRepository, IOrderRepository, IAuthRepository } from "./types";
+import { API_BASE_URL } from "./ApiRepository";
 
 /**
- * TOGGLE THIS FLAG TO SWITCH THE ENTIRE APP BACKEND:
- * - false: Runs locally using client-side mock data (MOCK_PRODUCTS).
- * - true: Runs against Next.js production backend API (pointing to API_BASE_URL).
+ * Toggle backend mode dynamically depending on environment configuration.
+ * Evaluates to true if API_BASE_URL is non-empty (and not filtered by localhost guard).
  */
-const USE_LIVE_API = true;
+export const USE_LIVE_API = !!API_BASE_URL;
 
 export const ProductRepository: IProductRepository = USE_LIVE_API
   ? new ApiProductRepository()

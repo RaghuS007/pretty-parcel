@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -14,40 +13,75 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { AuthRepository } from "../../src/repository";
 import { THEME } from "../../src/constants/theme";
+import { useStore } from "../../src/store/useStore";
 
 export default function LoginScreen() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Validation errors
+  const [nameError, setNameError] = useState("");
+  const [mobileError, setMobileError] = useState("");
+
+  const showToast = useStore((state) => state.showToast);
+
   const handleSendOtp = async () => {
+    let hasError = false;
+
     if (!name.trim()) {
-      Alert.alert("Required Field", "Please enter your name.");
-      return;
+      setNameError("Please enter your name.");
+      hasError = true;
+    } else if (name.trim().length < 2) {
+      setNameError("Name must be at least 2 characters.");
+      hasError = true;
     }
+
     if (!mobile.trim()) {
-      Alert.alert("Required Field", "Please enter your mobile number.");
-      return;
+      setMobileError("Please enter your mobile number.");
+      hasError = true;
+    } else if (!/^[6-9]\d{9}$/.test(mobile)) {
+      setMobileError("Please enter a valid 10-digit mobile number starting with 6-9.");
+      hasError = true;
     }
-    
+
+    if (hasError) return;
+
     setLoading(true);
     try {
       const res = await AuthRepository.sendOtp(mobile);
       if (res.success) {
+        showToast({
+          type: "success",
+          title: "Code Sent",
+          message: res.msg || "Verification OTP code sent successfully.",
+        });
+
         // Navigate to verification screen passing parameters
         router.push({
           pathname: "/auth/otp",
           params: { mobile, name: name.trim() },
         });
       } else {
-        Alert.alert("Validation Error", res.msg);
+        showToast({
+          type: "error",
+          title: "Validation Error",
+          message: res.msg,
+        });
       }
     } catch (err) {
-      Alert.alert("Connection Error", "Could not connect to support service. Please try again.");
+      showToast({
+        type: "error",
+        title: "Connection Error",
+        message: "Could not connect to support service. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  const isFormValid = name.trim().length >= 2 && /^[6-9]\d{9}$/.test(mobile);
+  const isDisabled = loading || !isFormValid;
 
   return (
     <KeyboardAvoidingView
@@ -68,41 +102,58 @@ export default function LoginScreen() {
         {/* Inputs */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>YOUR NAME</Text>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, nameError ? styles.inputContainerError : null]}>
             <Feather name="user" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Ananya Sharma"
               placeholderTextColor={THEME.colors.inkSoft}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                if (text.trim().length >= 2) {
+                  setNameError("");
+                }
+              }}
             />
           </View>
+          {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>MOBILE PHONE</Text>
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, mobileError ? styles.inputContainerError : null]}>
             <Feather name="phone" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 9876543210"
               placeholderTextColor={THEME.colors.inkSoft}
               value={mobile}
-              onChangeText={setMobile}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, "");
+                setMobile(clean);
+                if (clean.length === 0 || /^[6-9]\d{9}$/.test(clean)) {
+                  setMobileError("");
+                } else if (clean.length > 0 && !/^[6-9]/.test(clean)) {
+                  setMobileError("Indian mobile number must start with 6-9.");
+                } else if (clean.length < 10) {
+                  setMobileError("Must be exactly 10 digits.");
+                }
+              }}
               keyboardType="phone-pad"
               maxLength={10}
             />
           </View>
+          {mobileError ? <Text style={styles.errorText}>{mobileError}</Text> : null}
         </View>
 
         <Pressable
           onPress={handleSendOtp}
-          disabled={loading}
+          disabled={isDisabled}
           style={({ pressed }) => [
             styles.submitBtn,
-            pressed && styles.submitBtnPressed,
-            loading && { opacity: 0.8 },
+            pressed && !isDisabled && styles.submitBtnPressed,
+            isDisabled && styles.submitBtnDisabled,
           ]}
         >
           {loading ? (
@@ -139,6 +190,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...THEME.shadows.card,
+    zIndex: 10,
   },
   innerCard: {
     backgroundColor: THEME.colors.white,
@@ -192,6 +244,9 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.background,
     paddingHorizontal: THEME.spacing.md,
   },
+  inputContainerError: {
+    borderColor: THEME.colors.error,
+  },
   inputIcon: {
     marginRight: 8,
   },
@@ -200,6 +255,13 @@ const styles = StyleSheet.create({
     fontFamily: THEME.fonts.body.regular,
     fontSize: 13,
     color: THEME.colors.text,
+  },
+  errorText: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 10,
+    color: THEME.colors.error,
+    marginTop: 4,
+    marginLeft: 4,
   },
   submitBtn: {
     backgroundColor: THEME.colors.primary,
@@ -213,7 +275,13 @@ const styles = StyleSheet.create({
     ...THEME.shadows.button,
   },
   submitBtnPressed: {
-    opacity: 0.95,
+    opacity: 0.9,
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
+    backgroundColor: THEME.colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitBtnText: {
     fontFamily: THEME.fonts.body.semibold,

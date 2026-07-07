@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  Alert,
   useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -29,6 +28,7 @@ export default function HomeScreen() {
   // Read recently viewed IDs from store
   const recentlyViewedIds = useStore((state) => state.recentlyViewed);
   const clearViewed = useStore((state) => state.clearViewed);
+  const showToast = useStore((state) => state.showToast);
 
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
@@ -77,15 +77,20 @@ export default function HomeScreen() {
 
   const handleSubscribe = () => {
     if (!emailInput.trim() || !emailInput.includes("@")) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      showToast({
+        type: "error",
+        title: "Invalid Email",
+        message: "Please enter a valid email address.",
+      });
       return;
     }
     setSubscribed(true);
     setEmailInput("");
-    Alert.alert(
-      "Subscribed! ✨",
-      "Thank you for joining our newsletter. Enjoy exclusive access to new arrivals & promotions."
-    );
+    showToast({
+      type: "success",
+      title: "Subscribed! ✨",
+      message: "Thank you for joining our newsletter. Enjoy exclusive access to new arrivals & promotions.",
+    });
   };
 
   const navigateToCategory = (catId: string) => {

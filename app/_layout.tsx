@@ -17,6 +17,7 @@ import {
 } from "@expo-google-fonts/cormorant-garamond";
 
 import { THEME } from '../src/constants/theme';
+import { AppToast } from '../src/components/AppToast';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -93,6 +94,7 @@ function RootLayoutNav() {
         <Stack.Screen name="auth/otp" options={{ headerShown: false }} />
         <Stack.Screen name="checkout/success" options={{ headerShown: false }} />
       </Stack>
+      <AppToast />
     </ThemeProvider>
   );
 }

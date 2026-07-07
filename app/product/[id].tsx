@@ -7,7 +7,6 @@ import {
   Pressable,
   ActivityIndicator,
   Share,
-  Alert,
   useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";

@@ -1,12 +1,20 @@
+import { Platform } from "react-native";
 import { IProductRepository, ICouponRepository, IOrderRepository, IAuthRepository } from "./types";
 import { Product, Coupon, Order, User } from "../data/types";
 import { useStore } from "../store/useStore";
 
-/**
- * Live Next.js API Repository client implementation.
- * Connects directly to the local dev Next.js server on port 3000.
- */
-export const API_BASE_URL = "http://localhost:3000/api";
+const rawUrl = process.env.EXPO_PUBLIC_API_URL || "";
+const isDev = __DEV__;
+
+// Guard for localhost in production
+const containsLocalhost = rawUrl.toLowerCase().includes("localhost") || rawUrl.includes("127.0.0.1");
+const isWebProduction = Platform.OS === "web" && !isDev;
+
+export const API_BASE_URL = containsLocalhost && isWebProduction ? "" : rawUrl;
+
+if (containsLocalhost && isWebProduction) {
+  console.warn("EXPO_PUBLIC_API_URL contains localhost in web production. Forcing mock repository mode.");
+}
 
 function mapProduct(p: any): Product {
   return {

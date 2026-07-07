@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  Alert,
   useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -58,6 +57,7 @@ export default function CartScreen() {
   const setAppliedCoupon = useStore((state) => state.setAppliedCoupon);
   const addOrder = useStore((state) => state.addOrder);
   const user = useStore((state) => state.user);
+  const showToast = useStore((state) => state.showToast);
 
   // Load catalog on mount
   useEffect(() => {
@@ -178,21 +178,37 @@ export default function CartScreen() {
   const handleNextStep = () => {
     if (step === 1) {
       if (cartProducts.length === 0) {
-        Alert.alert("Empty Cart", "Please add some items to your cart first.");
+        showToast({
+          type: "error",
+          title: "Empty Cart",
+          message: "Please add some items to your cart first.",
+        });
         return;
       }
       setStep(2);
     } else if (step === 2) {
       if (!name.trim() || !phone.trim() || !line.trim() || !city.trim() || !stateName.trim() || !pincode.trim()) {
-        Alert.alert("Required Fields", "Please fill in all shipping details.");
+        showToast({
+          type: "error",
+          title: "Required Fields",
+          message: "Please fill in all shipping details.",
+        });
         return;
       }
       if (!/^[6-9]\d{9}$/.test(phone)) {
-        Alert.alert("Invalid Phone", "Please enter a valid 10-digit mobile number.");
+        showToast({
+          type: "error",
+          title: "Invalid Phone",
+          message: "Please enter a valid 10-digit mobile number.",
+        });
         return;
       }
       if (!/^\d{6}$/.test(pincode)) {
-        Alert.alert("Invalid Pincode", "Please enter a valid 6-digit postal code.");
+        showToast({
+          type: "error",
+          title: "Invalid Pincode",
+          message: "Please enter a valid 6-digit postal code.",
+        });
         return;
       }
       setStep(3);
@@ -257,7 +273,11 @@ export default function CartScreen() {
         params: { orderId, total },
       });
     } catch (err) {
-      Alert.alert("Checkout Error", "Failed to place your order. Please try again.");
+      showToast({
+        type: "error",
+        title: "Checkout Error",
+        message: "Failed to place your order. Please try again.",
+      });
     } finally {
       setPlacingOrder(false);
     }

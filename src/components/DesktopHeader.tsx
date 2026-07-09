@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: THEME.colors.border,
+    zIndex: 10,
   },
   logoContainer: {
     width: 200,

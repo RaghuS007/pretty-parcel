@@ -115,43 +115,30 @@ export class ApiProductRepository implements IProductRepository {
 
 export class ApiCouponRepository implements ICouponRepository {
   async getCoupons(): Promise<Record<string, Coupon & { isActive?: boolean }>> {
-    // Note: When calling backend, coupons status would normally be loaded from server.
-    // For local stub fallback:
-    return {
-      NEEMS10: { type: "pct", value: 10, label: "10% off", isActive: true },
-      PARCEL200: { type: "flat", value: 200, min: 1499, label: "₹200 off on ₹1,499+", isActive: true }
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/coupons`);
+      if (!res.ok) throw new Error("Failed to fetch coupons");
+      const data = await res.json();
+      return data.coupons || {};
+    } catch (e) {
+      console.error("Error in getCoupons:", e);
+      return {};
+    }
   }
 
   async validateCoupon(code: string, subtotal: number): Promise<{ valid: boolean; discount: number; msg: string }> {
-    const cleanCode = code.trim().toUpperCase();
-    const coupons: Record<string, { type: "pct" | "flat"; value: number; min?: number; label: string }> = {
-      NEEMS10: { type: "pct", value: 10, label: "10% off" },
-      PARCEL200: { type: "flat", value: 200, min: 1499, label: "₹200 off on ₹1,499+" }
-    };
-    
-    const coupon = coupons[cleanCode as keyof typeof coupons];
-    if (!coupon) {
-      return { valid: false, discount: 0, msg: "Hmm, that code isn't valid" };
+    try {
+      const res = await fetch(`${API_BASE_URL}/coupons/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal })
+      });
+      if (!res.ok) throw new Error("Failed to validate coupon");
+      return await res.json();
+    } catch (e) {
+      console.error("Error in validateCoupon:", e);
+      return { valid: false, discount: 0, msg: "Could not reach the server to validate this coupon" };
     }
-    
-    if (coupon.min && subtotal < coupon.min) {
-      return {
-        valid: false,
-        discount: 0,
-        msg: `${cleanCode} needs a minimum order of ₹${coupon.min.toLocaleString("en-IN")}`,
-      };
-    }
-    
-    const discount = coupon.type === "pct" 
-      ? Math.round((subtotal * coupon.value) / 100)
-      : coupon.value;
-      
-    return {
-      valid: true,
-      discount,
-      msg: `${cleanCode} applied — ${coupon.label} ✓`,
-    };
   }
 
   async updateCouponActive(code: string, isActive: boolean): Promise<void> {

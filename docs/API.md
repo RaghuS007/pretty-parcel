@@ -1,0 +1,50 @@
+# API Contract — `/api/*` (Cloudflare Worker + D1)
+
+Source: `server/index.ts`. Client: `src/repository/ApiRepository.ts`. Money = integer paise unless noted. Errors: `{ "error": string }` with 4xx/5xx.
+
+## Auth
+Session = HttpOnly cookie `pp_session` (30 d, SHA-256 hashed in `sessions` table). 🔒 = signed-in, 👑 = admin role (403 otherwise).
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/auth/send-otp` | `{mobile}` (`^[6-9]\d{9}$`) | `{ok, devOtp?}` — devOtp only when `OTP_DEV_MODE=true`; 429 on <30 s resend |
+| POST | `/api/auth/verify-otp` | `{mobile, otp, name?}` | `{user:{mobile,name,role}}` + Set-Cookie; 10 min expiry, 5 attempts max |
+| GET | `/api/auth/me` 🔒 | — | `{user}` |
+| POST | `/api/auth/logout` | — | `{ok}` + clears cookie |
+
+## Catalog
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/products?sort=popular\|new` | `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[]}]}` |
+| GET | `/api/products/:id` | `{product}` or 404 |
+| PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields}` (paise prices) → `{product}` updated |
+
+## Coupons
+Coupon values are **rupees** (`pct`: percent; `flat`: whole ₹; `min`: rupee threshold).
+
+| Method | Path | Body → Response |
+|---|---|---|
+| GET | `/api/coupons` | `{coupons:{CODE:{type,value,min?,label,isActive}}}` |
+| POST | `/api/coupons/validate` | `{code, subtotal(₹)}` → `{valid, discount(₹), msg}` |
+| POST | `/api/admin/coupons/active` 👑 | `{code, isActive}` → `{ok}` |
+
+## Orders
+Server recomputes all prices from D1; client totals are ignored. Shipping: free ≥ ₹999, else ₹79.
+
+| Method | Path | Body → Response |
+|---|---|---|
+| POST | `/api/orders` 🔒 | `{items:[{id,qty}], couponCode?, shippingAddress, paymentMethod}` → 201 `{order}` |
+| GET | `/api/orders` 🔒 | `{orders:[…]}` (own orders, newest first) |
+| GET | `/api/admin/orders` 👑 | `{orders:[…]}` (all, includes `mobile`) |
+| POST | `/api/admin/orders/status` 👑 | `{orderId: orderNumber, status: processing\|shipped\|delivered\|cancelled}` → `{ok}` |
+
+Order shape: `{id(uuid), orderNumber("PP-ORD-…"), mobile, items:[{id,qty,unitPricePaise}], subtotalPaise, discountPaise, shippingPaise, totalPaise, couponCode, paymentMethod, status, shippingAddress, createdAt(ISO)}`
+
+## Local smoke test
+```bash
+pnpm db:migrate:local && pnpm db:seed:local && pnpm api:dev
+curl -s localhost:8787/api/products | head -c 200
+OTP=$(curl -s -X POST localhost:8787/api/auth/send-otp -H 'Content-Type: application/json' -d '{"mobile":"9999999999"}' | sed -n 's/.*"devOtp":"\([0-9]*\)".*/\1/p')
+curl -s -c /tmp/jar -X POST localhost:8787/api/auth/verify-otp -H 'Content-Type: application/json' -d "{\"mobile\":\"9999999999\",\"otp\":\"$OTP\"}"
+curl -s -b /tmp/jar localhost:8787/api/admin/orders
+```

@@ -1,5 +1,7 @@
-# wrangler.toml — Cloudflare Worker serving static HTML/CSS/JS assets
+# Cloudflare Worker: serves the static Expo web build from dist/ AND the
+# persistent API (server/index.ts + D1) on /api/* — one deployment for both.
 name = "pretty-parcel-next"
+main = "server/index.ts"
 compatibility_date = "2026-07-06"
 
 [build]
@@ -7,3 +9,19 @@ command = "pnpm build"
 
 [assets]
 directory = "dist"
+# API paths must reach the worker, never the asset matcher.
+run_worker_first = ["/api/*"]
+
+# One-time setup: `pnpm wrangler d1 create pretty-parcel-db`, then paste the
+# generated database_id below. Apply schema with `pnpm db:migrate && pnpm db:seed`.
+[[d1_databases]]
+binding = "DB"
+database_name = "pretty-parcel-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+# Mobile numbers granted the admin role at login (comma-separated).
+ADMIN_MOBILES = "9999999999"
+# "true": /api/auth/send-otp returns the OTP in the response (no SMS gateway wired).
+# Set to "false" once an SMS provider is integrated in server/index.ts sendOtp().
+OTP_DEV_MODE = "true"

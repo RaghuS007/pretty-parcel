@@ -1,6 +1,11 @@
 packages:
   - .
 
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd
+
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.5'
   - '@expo/config-plugins@57.0.3'

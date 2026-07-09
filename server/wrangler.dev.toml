@@ -1,0 +1,17 @@
+# API-only local dev config: runs the worker + local D1 without building the
+# Expo web assets (the root wrangler.toml [build] step). Use via:
+#   pnpm api:dev          — serve the API on http://localhost:8787
+#   pnpm db:migrate:local — apply schema to the local D1 sqlite
+#   pnpm db:seed:local    — seed catalog/coupons/admin locally
+name = "pretty-parcel-api-dev"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pretty-parcel-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+ADMIN_MOBILES = "9999999999"
+OTP_DEV_MODE = "true"

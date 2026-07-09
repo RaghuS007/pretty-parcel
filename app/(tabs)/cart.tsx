@@ -258,20 +258,21 @@ export default function CartScreen() {
     };
 
     try {
-      // Save order via mock OrderRepository which saves to AsyncStorage
-      await OrderRepository.createOrder(newOrder);
+      // Persist the order (live API recomputes totals server-side and returns
+      // the authoritative order; mock mode echoes it back from AsyncStorage)
+      const savedOrder = await OrderRepository.createOrder(newOrder);
       // Sync into memory Zustand store cached orders
-      addOrder(newOrder);
-      
+      addOrder(savedOrder);
+
       // Complete and clear
       clearCart();
       setAppliedCoupon(null);
       setStep(1);
-      
+
       // Navigate to success screen passing parameters
       router.push({
         pathname: "/checkout/success",
-        params: { orderId, total },
+        params: { orderId: savedOrder.id, total: savedOrder.total },
       });
     } catch (err) {
       showToast({

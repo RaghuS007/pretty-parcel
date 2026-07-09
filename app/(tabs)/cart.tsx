@@ -19,6 +19,7 @@ import { ProductImage } from "../../src/components/ProductImage";
 import { ProductCard } from "../../src/components/ProductCard";
 import { COMPLEMENT_RULES, DEFAULT_ADDRESSES } from "../../src/data/mockProducts";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 export default function CartScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -360,6 +361,84 @@ export default function CartScreen() {
     );
   };
 
+  const renderCouponSection = () => {
+    return (
+      <View style={styles.couponSection}>
+        <Text style={styles.couponHeading}>Offer Coupon Code</Text>
+        {appliedCoupon ? (
+          <View style={styles.appliedCouponBadge}>
+            <Feather name="tag" size={14} color={THEME.colors.success} />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.appliedCouponText}>
+                {couponSuccess || `Coupon ${appliedCoupon} Active`}
+              </Text>
+              <Text style={styles.appliedCouponSavings}>
+                Saved {formattedValue(couponDiscount)}
+              </Text>
+            </View>
+            <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
+              <Text style={styles.removeCouponText}>Remove</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.couponFormRow}>
+            <TextInput
+              style={styles.couponInput}
+              placeholder="Enter Coupon (e.g. NEEMS10)"
+              placeholderTextColor={THEME.colors.inkSoft}
+              value={couponInput}
+              onChangeText={setCouponInput}
+              autoCapitalize="characters"
+            />
+            <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
+              <Text style={styles.couponApplyBtnText}>Apply</Text>
+            </Pressable>
+          </View>
+        )}
+        {couponError && (
+          <Text style={styles.couponErrorMsg}>{couponError}</Text>
+        )}
+        {!appliedCoupon && (
+          <View style={styles.suggestedCouponsRow}>
+            <Text style={styles.couponSuggestedLabel}>Available Offers (Tap to Apply):</Text>
+            <View style={styles.couponBadgesList}>
+              <Pressable
+                onPress={() => {
+                  setCouponError(null);
+                  CouponRepository.validateCoupon("NEEMS10", subtotal).then(res => {
+                    if (res.valid) {
+                      setAppliedCoupon("NEEMS10");
+                    } else {
+                      setCouponError(res.msg);
+                    }
+                  });
+                }}
+                style={styles.couponSelectBadge}
+              >
+                <Text style={styles.couponSelectBadgeText}>NEEMS10 (10% Off)</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setCouponError(null);
+                  CouponRepository.validateCoupon("PARCEL200", subtotal).then(res => {
+                    if (res.valid) {
+                      setAppliedCoupon("PARCEL200");
+                    } else {
+                      setCouponError(res.msg);
+                    }
+                  });
+                }}
+                style={styles.couponSelectBadge}
+              >
+                <Text style={styles.couponSelectBadgeText}>PARCEL200 (₹200 Off)</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderCartItems = () => {
     if (cartProducts.length === 0) {
       return (
@@ -422,6 +501,7 @@ export default function CartScreen() {
 
   return (
     <View style={styles.outerContainer}>
+      <DesktopHeader />
       {/* Wizard step breadcrumbs bar */}
       <View style={[styles.stepIndicatorRow, isDesktop && { maxWidth: 1200, width: "100%", alignSelf: "center", borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
         <View style={styles.stepCell}>
@@ -466,47 +546,7 @@ export default function CartScreen() {
                   {renderCartItems()}
 
                   {/* Labeled Coupon Form Block */}
-                  <View style={styles.couponSection}>
-                    <Text style={styles.couponHeading}>Offer Coupon Code</Text>
-                    {appliedCoupon ? (
-                      <View style={styles.appliedCouponBadge}>
-                        <Feather name="tag" size={14} color={THEME.colors.success} />
-                        <View style={{ flex: 1, marginLeft: 8 }}>
-                          <Text style={styles.appliedCouponText}>
-                            {couponSuccess || `Coupon ${appliedCoupon} Active`}
-                          </Text>
-                          <Text style={styles.appliedCouponSavings}>
-                            Saved {formattedValue(couponDiscount)}
-                          </Text>
-                        </View>
-                        <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
-                          <Text style={styles.removeCouponText}>Remove</Text>
-                        </Pressable>
-                      </View>
-                    ) : (
-                      <View style={styles.couponFormRow}>
-                        <TextInput
-                          style={styles.couponInput}
-                          placeholder="Enter Coupon (e.g. NEEMS10)"
-                          placeholderTextColor={THEME.colors.inkSoft}
-                          value={couponInput}
-                          onChangeText={setCouponInput}
-                          autoCapitalize="characters"
-                        />
-                        <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
-                          <Text style={styles.couponApplyBtnText}>Apply</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                    {couponError && (
-                      <Text style={styles.couponErrorMsg}>{couponError}</Text>
-                    )}
-                    {!appliedCoupon && (
-                      <Text style={styles.couponMutedHint}>
-                        Try code <Text style={{ fontFamily: THEME.fonts.body.semibold }}>NEEMS10</Text> (10% off) or <Text style={{ fontFamily: THEME.fonts.body.semibold }}>PARCEL200</Text>
-                      </Text>
-                    )}
-                  </View>
+                  {renderCouponSection()}
 
                   {/* Complete the look suggestions (PRD §8) */}
                   {lookItems.length > 0 && (
@@ -539,47 +579,7 @@ export default function CartScreen() {
                 {renderCartItems()}
 
                 {/* Labeled Coupon Form Block */}
-                <View style={styles.couponSection}>
-                  <Text style={styles.couponHeading}>Offer Coupon Code</Text>
-                  {appliedCoupon ? (
-                    <View style={styles.appliedCouponBadge}>
-                      <Feather name="tag" size={14} color={THEME.colors.success} />
-                      <View style={{ flex: 1, marginLeft: 8 }}>
-                        <Text style={styles.appliedCouponText}>
-                          {couponSuccess || `Coupon ${appliedCoupon} Active`}
-                        </Text>
-                        <Text style={styles.appliedCouponSavings}>
-                          Saved {formattedValue(couponDiscount)}
-                        </Text>
-                      </View>
-                      <Pressable onPress={handleRemoveCoupon} style={styles.removeCouponBtn}>
-                        <Text style={styles.removeCouponText}>Remove</Text>
-                      </Pressable>
-                    </View>
-                  ) : (
-                    <View style={styles.couponFormRow}>
-                      <TextInput
-                        style={styles.couponInput}
-                        placeholder="Enter Coupon (e.g. NEEMS10)"
-                        placeholderTextColor={THEME.colors.inkSoft}
-                        value={couponInput}
-                        onChangeText={setCouponInput}
-                        autoCapitalize="characters"
-                      />
-                      <Pressable onPress={handleApplyCoupon} style={styles.couponApplyBtn}>
-                        <Text style={styles.couponApplyBtnText}>Apply</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                  {couponError && (
-                    <Text style={styles.couponErrorMsg}>{couponError}</Text>
-                  )}
-                  {!appliedCoupon && (
-                    <Text style={styles.couponMutedHint}>
-                      Try code <Text style={{ fontFamily: THEME.fonts.body.semibold }}>NEEMS10</Text> (10% off) or <Text style={{ fontFamily: THEME.fonts.body.semibold }}>PARCEL200</Text>
-                    </Text>
-                  )}
-                </View>
+                {renderCouponSection()}
 
                 {renderSummaryBlock()}
 
@@ -612,73 +612,91 @@ export default function CartScreen() {
             
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Full Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Ananya Sharma"
-                placeholderTextColor={THEME.colors.inkSoft}
-              />
+              <View style={styles.formInputContainer}>
+                <Feather name="user" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                <TextInput
+                  style={styles.formTextInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g. Ananya Sharma"
+                  placeholderTextColor={THEME.colors.inkSoft}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Mobile Phone *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="10-digit number"
-                placeholderTextColor={THEME.colors.inkSoft}
-                keyboardType="phone-pad"
-                maxLength={10}
-              />
+              <View style={styles.formInputContainer}>
+                <Feather name="phone" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                <TextInput
+                  style={styles.formTextInput}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="10-digit number"
+                  placeholderTextColor={THEME.colors.inkSoft}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Address Line *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={line}
-                onChangeText={setLine}
-                placeholder="Flat / House / Street Name"
-                placeholderTextColor={THEME.colors.inkSoft}
-              />
+              <View style={styles.formInputContainer}>
+                <Feather name="map-pin" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                <TextInput
+                  style={styles.formTextInput}
+                  value={line}
+                  onChangeText={setLine}
+                  placeholder="Flat / House / Street Name"
+                  placeholderTextColor={THEME.colors.inkSoft}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>City *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={city}
-                onChangeText={setCity}
-                placeholder="e.g. Bengaluru"
-                placeholderTextColor={THEME.colors.inkSoft}
-              />
+              <View style={styles.formInputContainer}>
+                <Feather name="map" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                <TextInput
+                  style={styles.formTextInput}
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="e.g. Bengaluru"
+                  placeholderTextColor={THEME.colors.inkSoft}
+                />
+              </View>
             </View>
 
             <View style={styles.rowInputs}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
                 <Text style={styles.inputLabel}>State *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={stateName}
-                  onChangeText={setStateName}
-                  placeholder="Karnataka"
-                  placeholderTextColor={THEME.colors.inkSoft}
-                />
+                <View style={styles.formInputContainer}>
+                  <Feather name="globe" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={stateName}
+                    onChangeText={setStateName}
+                    placeholder="Karnataka"
+                    placeholderTextColor={THEME.colors.inkSoft}
+                  />
+                </View>
               </View>
 
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
                 <Text style={styles.inputLabel}>Pincode *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={pincode}
-                  onChangeText={setPincode}
-                  placeholder="6-digit PIN"
-                  placeholderTextColor={THEME.colors.inkSoft}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
+                <View style={styles.formInputContainer}>
+                  <Feather name="hash" size={14} color={THEME.colors.secondary} style={styles.formInputIcon} />
+                  <TextInput
+                    style={styles.formTextInput}
+                    value={pincode}
+                    onChangeText={setPincode}
+                    placeholder="6-digit PIN"
+                    placeholderTextColor={THEME.colors.inkSoft}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                </View>
               </View>
             </View>
           </View>
@@ -687,6 +705,11 @@ export default function CartScreen() {
         {step === 3 && (
           <View style={[styles.paymentSection, isDesktop && { maxWidth: 600, width: "100%", alignSelf: "center", marginTop: 24 }]}>
             <Text style={styles.formTitle}>Choose Payment Method</Text>
+            
+            <View style={styles.secureBadgeRow}>
+              <Feather name="shield" size={14} color={THEME.colors.success} style={{ marginRight: 4 }} />
+              <Text style={styles.secureBadgeText}>100% SSL Secure Checkout & Encrypted Transactions</Text>
+            </View>
             
             {/* COD Option */}
             <Pressable
@@ -1210,6 +1233,66 @@ const styles = StyleSheet.create({
     fontFamily: THEME.fonts.body.regular,
     fontSize: 12,
     color: THEME.colors.text,
+  },
+  formInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 42,
+    borderRadius: THEME.radius.md,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    backgroundColor: THEME.colors.background,
+    paddingHorizontal: THEME.spacing.md,
+  },
+  formInputIcon: {
+    marginRight: 8,
+  },
+  formTextInput: {
+    flex: 1,
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 12,
+    color: THEME.colors.text,
+  },
+  secureBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(46, 125, 82, 0.05)",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: THEME.radius.sm,
+    marginBottom: THEME.spacing.sm,
+  },
+  secureBadgeText: {
+    fontFamily: THEME.fonts.body.medium,
+    fontSize: 10,
+    color: THEME.colors.success,
+  },
+  suggestedCouponsRow: {
+    marginTop: THEME.spacing.sm,
+  },
+  couponSuggestedLabel: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 11,
+    color: THEME.colors.secondary,
+    marginBottom: 6,
+  },
+  couponBadgesList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  couponSelectBadge: {
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.primary,
+    borderRadius: THEME.radius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  couponSelectBadgeText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 10,
+    color: THEME.colors.primary,
   },
   rowInputs: {
     flexDirection: "row",

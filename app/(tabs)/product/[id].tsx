@@ -19,6 +19,7 @@ import { ProductImage } from "../../../src/components/ProductImage";
 import { RatingStars } from "../../../src/components/RatingStars";
 import { ProductCard } from "../../../src/components/ProductCard";
 import { SupportDrawer } from "../../../src/components/SupportDrawer";
+import { DesktopHeader } from "../../../src/components/DesktopHeader";
 
 const MOCK_REVIEWS_CATALOG: Record<string, Review[]> = {
   "demi-fine": [
@@ -180,6 +181,7 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={styles.outerContainer}>
+      <DesktopHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={isDesktop ? { flexDirection: "row", maxWidth: 1200, width: "100%", alignSelf: "center", gap: 24, padding: 24 } : null}>
           <View style={isDesktop ? { width: "50%" } : null}>
@@ -286,6 +288,24 @@ export default function ProductDetailScreen() {
                   {isWishlisted ? "In Wishlist (Tap to Remove)" : "Add to Wishlist"}
                 </Text>
               </Pressable>
+
+              {/* Product Trust Signals Widget (Flipkart/Amazon UX) */}
+              <View style={styles.trustWidget}>
+                <View style={styles.trustItemInline}>
+                  <Feather name="truck" size={14} color={THEME.colors.primary} />
+                  <Text style={styles.trustWidgetText}>Dispatch in 24h</Text>
+                </View>
+                <View style={styles.trustDivider} />
+                <View style={styles.trustItemInline}>
+                  <Feather name="refresh-cw" size={12} color={THEME.colors.primary} />
+                  <Text style={styles.trustWidgetText}>7 Days Returns</Text>
+                </View>
+                <View style={styles.trustDivider} />
+                <View style={styles.trustItemInline}>
+                  <Feather name="credit-card" size={14} color={THEME.colors.primary} />
+                  <Text style={styles.trustWidgetText}>COD & UPI Safe</Text>
+                </View>
+              </View>
             </View>
             <View style={styles.accordionContainer}>
               <View style={styles.accordionItem}>
@@ -635,6 +655,33 @@ const styles = StyleSheet.create({
   },
   wishlistBarTextActive: {
     color: THEME.colors.primary,
+  },
+  trustWidget: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: THEME.colors.background,
+    borderRadius: THEME.radius.md,
+    paddingVertical: 10,
+    marginTop: THEME.spacing.md,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  trustItemInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trustDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: THEME.colors.border,
+  },
+  trustWidgetText: {
+    fontFamily: THEME.fonts.body.medium,
+    fontSize: 10,
+    color: THEME.colors.text,
+    marginLeft: 4,
   },
   accordionContainer: {
     marginTop: THEME.spacing.md,

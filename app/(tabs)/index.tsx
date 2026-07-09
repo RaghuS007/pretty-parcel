@@ -18,6 +18,7 @@ import { useStore } from "../../src/store/useStore";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { ProductImage } from "../../src/components/ProductImage";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -111,19 +112,39 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.outerContainer}>
+      <DesktopHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={contentMaxWidthStyle}>
-        {/* Branding Header Area */}
-        <View style={styles.brandHeader}>
-          <Text style={styles.brandTitle}>The Pretty Parcel</Text>
-          <Text style={styles.brandSubtitle}>by Neems</Text>
-        </View>
+        {!isDesktop && (
+          <>
+            {/* Branding Header Area */}
+            <View style={styles.brandHeader}>
+              <Text style={styles.brandTitle}>The Pretty Parcel</Text>
+              <Text style={styles.brandSubtitle}>by Neems</Text>
+            </View>
+
+            {/* Discovery Search Entry Point (Flipkart/Amazon UX) */}
+            <Pressable
+              onPress={() => router.push("/(tabs)/shop")}
+              style={styles.searchBarRow}
+            >
+              <View style={styles.searchContainer}>
+                <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
+                <Text style={styles.searchPlaceholder}>Search necklaces, claw clips, earrings...</Text>
+              </View>
+            </Pressable>
+          </>
+        )}
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
+          {/* Decorative Sparkle Icons */}
+          <Feather name="star" size={16} color={THEME.colors.primary} style={styles.heroSparkleLeft} />
+          <Feather name="star" size={16} color={THEME.colors.primary} style={styles.heroSparkleRight} />
+          
           <View style={styles.heroTextContainer}>
             <Text style={styles.heroPreTitle}>CURATED ELEGANCE</Text>
             <Text style={styles.heroTitle}>Handcrafted demi-fine jewellery for every mood</Text>
@@ -140,6 +161,26 @@ export default function HomeScreen() {
               <Text style={styles.heroButtonText}>Shop New Arrivals</Text>
               <Feather name="arrow-right" size={14} color={THEME.colors.white} />
             </Pressable>
+          </View>
+        </View>
+
+        {/* Trust Badges Row (Amazon/Flipkart UX) */}
+        <View style={styles.trustRow}>
+          <View style={styles.trustItem}>
+            <Feather name="truck" size={16} color={THEME.colors.primary} />
+            <Text style={styles.trustText}>Free Delivery{"\n"}above ₹999</Text>
+          </View>
+          <View style={styles.trustItem}>
+            <Feather name="refresh-cw" size={14} color={THEME.colors.primary} />
+            <Text style={styles.trustText}>Easy 7-Day{"\n"}Returns</Text>
+          </View>
+          <View style={styles.trustItem}>
+            <Feather name="shield" size={16} color={THEME.colors.primary} />
+            <Text style={styles.trustText}>COD Available{"\n"}& Secure Pay</Text>
+          </View>
+          <View style={styles.trustItem}>
+            <Feather name="award" size={16} color={THEME.colors.primary} />
+            <Text style={styles.trustText}>Premium{"\n"}Handcrafted</Text>
           </View>
         </View>
 
@@ -419,13 +460,83 @@ const styles = StyleSheet.create({
     color: THEME.colors.primary,
     marginTop: -2,
   },
-  heroSection: {
-    backgroundColor: "#FFEBE5", // Soft Peach backdrop
-    paddingVertical: THEME.spacing.xxl + 8,
+  searchBarRow: {
     paddingHorizontal: THEME.spacing.lg,
-    alignItems: "center",
+    paddingVertical: THEME.spacing.md,
+    backgroundColor: THEME.colors.white,
     borderBottomWidth: 1,
     borderBottomColor: THEME.colors.border,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: THEME.colors.background,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    borderRadius: THEME.radius.round,
+    paddingHorizontal: THEME.spacing.md,
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchPlaceholder: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 12,
+    color: THEME.colors.inkSoft,
+  },
+  heroSection: {
+    backgroundColor: "#FFEBE5", // Soft Peach backdrop
+    marginHorizontal: THEME.spacing.lg,
+    marginTop: THEME.spacing.md,
+    paddingVertical: THEME.spacing.xl + 6,
+    paddingHorizontal: THEME.spacing.lg,
+    borderRadius: THEME.radius.lg,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
+    ...THEME.shadows.card,
+  },
+  heroSparkleLeft: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    opacity: 0.6,
+  },
+  heroSparkleRight: {
+    position: "absolute",
+    bottom: 14,
+    right: 14,
+    opacity: 0.6,
+  },
+  trustRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: THEME.colors.white,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    borderRadius: THEME.radius.lg,
+    marginHorizontal: THEME.spacing.lg,
+    marginTop: THEME.spacing.md,
+    paddingVertical: THEME.spacing.md,
+    paddingHorizontal: THEME.spacing.sm,
+    ...THEME.shadows.card,
+  },
+  trustItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  trustText: {
+    fontFamily: THEME.fonts.body.medium,
+    fontSize: 9,
+    color: THEME.colors.text,
+    textAlign: "center",
+    lineHeight: 12,
   },
   heroTextContainer: {
     alignItems: "center",

@@ -1,10 +1,13 @@
 import { Tabs, router } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { THEME } from '../../src/constants/theme';
 import { useStore } from '../../src/store/useStore';
 
 export default function TabLayout() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
   const cartCount = useStore((state) => 
     Object.values(state.cart).reduce((acc, qty) => acc + qty, 0)
   );
@@ -12,6 +15,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: !isDesktop,
         tabBarActiveTintColor: THEME.colors.primary,
         tabBarInactiveTintColor: THEME.colors.inkSoft,
         tabBarLabelStyle: {
@@ -23,8 +27,9 @@ export default function TabLayout() {
           backgroundColor: THEME.colors.background,
           borderTopWidth: 1,
           borderTopColor: THEME.colors.border,
-          height: 60,
+          height: isDesktop ? 0 : 60,
           paddingTop: 6,
+          display: isDesktop ? "none" : "flex",
         },
         headerStyle: {
           backgroundColor: THEME.colors.background,
@@ -44,7 +49,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          headerShown: false, // We'll render a custom branding header on Home
+          headerShown: false, // We'll render a custom branding header on Home (on mobile only)
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" color={color} size={size - 2} />
           ),

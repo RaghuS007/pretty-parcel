@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -17,12 +18,16 @@ import { useStore } from "../../src/store/useStore";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { DEFAULT_ADDRESSES } from "../../src/data/mockProducts";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function AccountScreen() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
 
   // Store bindings
   const user = useStore((state) => state.user);
@@ -107,6 +112,7 @@ export default function AccountScreen() {
   if (!user) {
     return (
       <View style={styles.guestContainer}>
+        <DesktopHeader />
         <ScrollView contentContainerStyle={styles.guestScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.guestCard}>
             <View style={styles.guestIconCircle}>
@@ -156,23 +162,26 @@ export default function AccountScreen() {
   // 2. AUTHENTICATED USER PORTAL VIEW
   return (
     <View style={styles.outerContainer}>
+      <DesktopHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
         {/* Profile Card Header */}
-        <View style={styles.profileHeaderCard}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarLetter}>
-              {user.name.charAt(0).toUpperCase()}
-            </Text>
+        {!isDesktop && (
+          <View style={styles.profileHeaderCard}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarLetter}>
+                {user.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user.name}</Text>
+              <Text style={styles.profileMobile}>+91 {user.mobile}</Text>
+            </View>
+            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+              <Feather name="log-out" size={16} color={THEME.colors.error} />
+            </Pressable>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user.name}</Text>
-            <Text style={styles.profileMobile}>+91 {user.mobile}</Text>
-          </View>
-          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-            <Feather name="log-out" size={16} color={THEME.colors.error} />
-          </Pressable>
-        </View>
+        )}
 
         {/* Admin Dashboard Entry Panel */}
         {user.role === "admin" && (

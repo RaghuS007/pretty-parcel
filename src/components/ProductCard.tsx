@@ -24,6 +24,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const wishlist = useStore((state) => state.wishlist);
   const toggleWishlist = useStore((state) => state.toggleWishlist);
+  const addToCart = useStore((state) => state.addToCart);
+  const showToast = useStore((state) => state.showToast);
+  
   const isWishlisted = wishlist.includes(product.id);
 
   const formattedPrice = new Intl.NumberFormat("en-IN", {
@@ -39,9 +42,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   }).format(product.mrp);
 
   const hasDiscount = product.mrp > product.price;
+  const discountPercent = hasDiscount
+    ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
+    : 0;
 
   const handlePress = () => {
     router.push(`/product/${product.id}`);
+  };
+
+  const handleQuickAdd = (e: any) => {
+    e.stopPropagation(); // Stop navigation to detail page
+    addToCart(product.id, 1);
+    showToast({
+      type: "success",
+      title: "Added to Bag ✨",
+      message: `${product.name} has been added to your parcel!`,
+    });
   };
 
   return (
@@ -105,14 +121,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         <View style={styles.ratingRow}>
           <RatingStars rating={product.rating} size={10} />
+          <Text style={styles.reviewsCount}>({product.reviews})</Text>
         </View>
 
-        {/* Price Row */}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>{formattedPrice}</Text>
-          {hasDiscount && (
-            <Text style={styles.mrp}>{formattedMrp}</Text>
-          )}
+        {/* Price & Action Row */}
+        <View style={styles.actionRow}>
+          <View style={styles.priceContainer}>
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>{formattedPrice}</Text>
+              {hasDiscount && (
+                <Text style={styles.mrp}>{formattedMrp}</Text>
+              )}
+            </View>
+            {hasDiscount && (
+              <Text style={styles.discountText}>{discountPercent}% OFF</Text>
+            )}
+          </View>
+          
+          <Pressable
+            onPress={handleQuickAdd}
+            style={({ pressed }) => [
+              styles.quickAddBtn,
+              pressed && styles.quickAddBtnPressed,
+            ]}
+          >
+            <Feather name="plus" size={12} color={THEME.colors.primary} />
+            <Text style={styles.quickAddText}>Add</Text>
+          </Pressable>
         </View>
       </View>
     </Pressable>
@@ -176,7 +211,6 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.highlight,
   },
   heartFilled: {
-    // Styling indicator for active state (filled heart isn't native in Feather unless we change name to 'heart' fill or style it)
     fontWeight: "bold",
   },
   details: {
@@ -199,12 +233,30 @@ const styles = StyleSheet.create({
     height: 36, // Force double-line text height alignment
   },
   ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
+  },
+  reviewsCount: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 10,
+    color: THEME.colors.inkSoft,
+    marginLeft: 4,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  priceContainer: {
+    flex: 1,
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 6,
+    flexWrap: "wrap",
+    gap: 4,
   },
   price: {
     fontFamily: THEME.fonts.body.semibold,
@@ -216,5 +268,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: THEME.colors.inkSoft,
     textDecorationLine: "line-through",
+  },
+  discountText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 10,
+    color: THEME.colors.success,
+    marginTop: 1,
+  },
+  quickAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    borderWidth: 1,
+    borderColor: THEME.colors.primary,
+    borderRadius: THEME.radius.round,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: THEME.colors.white,
+    ...THEME.shadows.button,
+    shadowOpacity: 0.05,
+    elevation: 1,
+  },
+  quickAddBtnPressed: {
+    backgroundColor: THEME.colors.highlight,
+  },
+  quickAddText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 11,
+    color: THEME.colors.primary,
   },
 });

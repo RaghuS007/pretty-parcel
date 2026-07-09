@@ -19,6 +19,7 @@ import { THEME } from "../../src/constants/theme";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { CATEGORIES } from "../../src/data/mockProducts";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -43,7 +44,7 @@ const COLLECTIONS = [
 ];
 
 export default function ShopScreen() {
-  const params = useLocalSearchParams<{ category?: string }>();
+  const params = useLocalSearchParams<{ category?: string; autofocus?: string; search?: string }>();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
   const numColumns = isDesktop ? 4 : 2;
@@ -68,6 +69,9 @@ export default function ShopScreen() {
   // Filter Drawer State
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  // TextInput Reference
+  const searchInputRef = React.useRef<TextInput>(null);
+
   // Fetch catalog on mount
   useEffect(() => {
     async function loadData() {
@@ -83,12 +87,24 @@ export default function ShopScreen() {
     loadData();
   }, []);
 
-  // Listen to deep-link category changes from Home Category Row
+  // Listen to deep-link category changes from Home Category Row or Search Autofocus
   useEffect(() => {
     if (params.category) {
       setSelectedCategory(params.category);
+    } else {
+      setSelectedCategory(null);
     }
-  }, [params.category]);
+    if (params.search) {
+      setSearchQuery(params.search);
+    } else {
+      setSearchQuery("");
+    }
+    if (params.autofocus === "true") {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 150);
+    }
+  }, [params.category, params.autofocus, params.search]);
 
   const handleResetFilters = () => {
     setSelectedCategory(null);
@@ -161,20 +177,24 @@ export default function ShopScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Search Header Row */}
-      <View style={[styles.searchBarRow, isDesktop && { maxWidth: THEME.layout.maxWidth, width: '100%', alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search necklaces, clips, earrings..."
-            placeholderTextColor={THEME.colors.inkSoft}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchInput}
-            clearButtonMode="while-editing"
-          />
+      <DesktopHeader />
+      {!isDesktop && (
+        /* Search Header Row */
+        <View style={styles.searchBarRow}>
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
+            <TextInput
+              ref={searchInputRef}
+              placeholder="Search necklaces, clips, earrings..."
+              placeholderTextColor={THEME.colors.inkSoft}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+              clearButtonMode="while-editing"
+            />
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Control Buttons (Sort & Filter Drawer togglers) */}
       <View style={[styles.controlRow, isDesktop && { maxWidth: THEME.layout.maxWidth, width: '100%', alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: THEME.colors.border }]}>
@@ -182,11 +202,11 @@ export default function ShopScreen() {
           onPress={() => setIsSortOpen(true)}
           style={({ pressed }) => [styles.controlBtn, pressed && styles.controlBtnPressed]}
         >
-          <Feather name="align-left" size={14} color={THEME.colors.text} />
-          <Text style={styles.controlBtnText}>
+          <Feather name="align-left" size={14} color={activeSort !== "featured" ? THEME.colors.primary : THEME.colors.text} />
+          <Text style={[styles.controlBtnText, activeSort !== "featured" && styles.activeControlBtnText]}>
             Sort: {SORT_OPTIONS.find((o) => o.value === activeSort)?.label}
           </Text>
-          <Feather name="chevron-down" size={12} color={THEME.colors.secondary} />
+          <Feather name="chevron-down" size={12} color={activeSort !== "featured" ? THEME.colors.primary : THEME.colors.secondary} />
         </Pressable>
 
         <View style={styles.verticalDivider} />
@@ -195,12 +215,12 @@ export default function ShopScreen() {
           onPress={() => setIsFilterOpen(true)}
           style={({ pressed }) => [styles.controlBtn, pressed && styles.controlBtnPressed]}
         >
-          <Feather name="sliders" size={14} color={THEME.colors.text} />
-          <Text style={styles.controlBtnText}>
+          <Feather name="sliders" size={14} color={getActiveFilterCount() > 0 ? THEME.colors.primary : THEME.colors.text} />
+          <Text style={[styles.controlBtnText, getActiveFilterCount() > 0 && styles.activeControlBtnText]}>
             Filter
             {getActiveFilterCount() > 0 ? ` (${getActiveFilterCount()})` : ""}
           </Text>
-          <Feather name="chevron-down" size={12} color={THEME.colors.secondary} />
+          <Feather name="chevron-down" size={12} color={getActiveFilterCount() > 0 ? THEME.colors.primary : THEME.colors.secondary} />
         </Pressable>
       </View>
 
@@ -451,6 +471,10 @@ const styles = StyleSheet.create({
     fontFamily: THEME.fonts.body.medium,
     fontSize: 12,
     color: THEME.colors.text,
+  },
+  activeControlBtnText: {
+    fontFamily: THEME.fonts.body.semibold,
+    color: THEME.colors.primary,
   },
   verticalDivider: {
     width: 1,

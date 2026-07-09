@@ -7,12 +7,14 @@ import {
   Pressable,
   ActivityIndicator,
   Keyboard,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { AuthRepository, OrderRepository, USE_LIVE_API } from "../../src/repository";
 import { THEME } from "../../src/constants/theme";
 import { useStore } from "../../src/store/useStore";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 export default function OtpScreen() {
   const { mobile, name } = useLocalSearchParams<{ mobile: string; name: string }>();
@@ -150,89 +152,99 @@ export default function OtpScreen() {
     }
   };
 
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
   return (
-    <View style={styles.container}>
-      <Pressable onPress={() => router.back()} style={styles.backBtn}>
-        <Feather name="arrow-left" size={20} color={THEME.colors.text} />
-      </Pressable>
-
-      <View style={styles.innerCard}>
-        <Text style={styles.brandTitle}>SECURE LOGIN</Text>
-        <Text style={styles.title}>Enter OTP Code</Text>
-        <Text style={styles.subtitle}>
-          We've sent a 6-digit OTP verification code to +91 {mobile}. Please enter it below.
-        </Text>
-
-        {/* Demo warning banner in mock mode */}
-        {!USE_LIVE_API && (
-          <View style={styles.demoBanner}>
-            <Feather name="info" size={14} color="#7A5C3E" style={styles.demoBannerIcon} />
-            <Text style={styles.demoBannerText}>
-              Demo mode — use code <Text style={styles.demoBannerBold}>123456</Text>
-            </Text>
-          </View>
-        )}
-
-        {/* 6 Digit Input Row */}
-        <View style={styles.otpRow}>
-          {code.map((val, idx) => (
-            <TextInput
-              key={idx}
-              ref={inputRefs[idx]}
-              style={styles.otpInput}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={val}
-              onChangeText={(text) => handleChangeText(text, idx)}
-              onKeyPress={(e) => handleKeyPress(e, idx)}
-              autoComplete="sms-otp"
-              textContentType="oneTimeCode"
-            />
-          ))}
-        </View>
-
-        {/* Verification Trigger Button */}
-        <Pressable
-          onPress={handleVerifyOtp}
-          disabled={loading}
-          style={({ pressed }) => [
-            styles.verifyBtn,
-            pressed && styles.verifyBtnPressed,
-            loading && { opacity: 0.8 },
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color={THEME.colors.white} />
-          ) : (
-            <>
-              <Text style={styles.verifyBtnText}>Verify & Proceed</Text>
-              <Feather name="check" size={14} color={THEME.colors.white} />
-            </>
-          )}
+    <View style={styles.outerContainer}>
+      <DesktopHeader />
+      <View style={styles.container}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={20} color={THEME.colors.text} />
         </Pressable>
 
-        {/* Resend Panel */}
-        <View style={styles.resendContainer}>
-          {timer > 0 ? (
-            <Text style={styles.resendMutedText}>Resend code in {timer}s</Text>
-          ) : (
-            <Pressable onPress={handleResendOtp} disabled={resending}>
-              {resending ? (
-                <ActivityIndicator size="small" color={THEME.colors.primary} />
-              ) : (
-                <Text style={styles.resendActiveText}>Resend OTP</Text>
-              )}
-            </Pressable>
+        <View style={[styles.innerCard, isDesktop && { maxWidth: 500, width: "100%", alignSelf: "center" }]}>
+          <Text style={styles.brandTitle}>SECURE LOGIN</Text>
+          <Text style={styles.title}>Enter OTP Code</Text>
+          <Text style={styles.subtitle}>
+            We've sent a 6-digit OTP verification code to +91 {mobile}. Please enter it below.
+          </Text>
+
+          {/* Demo warning banner in mock mode */}
+          {!USE_LIVE_API && (
+            <View style={styles.demoBanner}>
+              <Feather name="info" size={14} color="#7A5C3E" style={styles.demoBannerIcon} />
+              <Text style={styles.demoBannerText}>
+                Demo mode — use code <Text style={styles.demoBannerBold}>123456</Text>
+              </Text>
+            </View>
           )}
+
+          {/* 6 Digit Input Row */}
+          <View style={styles.otpRow}>
+            {code.map((val, idx) => (
+              <TextInput
+                key={idx}
+                ref={inputRefs[idx]}
+                style={styles.otpInput}
+                keyboardType="number-pad"
+                maxLength={1}
+                value={val}
+                onChangeText={(text) => handleChangeText(text, idx)}
+                onKeyPress={(e) => handleKeyPress(e, idx)}
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
+              />
+            ))}
+          </View>
+
+          {/* Verification Trigger Button */}
+          <Pressable
+            onPress={handleVerifyOtp}
+            disabled={loading}
+            style={({ pressed }) => [
+              styles.verifyBtn,
+              pressed && styles.verifyBtnPressed,
+              loading && { opacity: 0.8 },
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={THEME.colors.white} />
+            ) : (
+              <>
+                <Text style={styles.verifyBtnText}>Verify & Proceed</Text>
+                <Feather name="check" size={14} color={THEME.colors.white} />
+              </>
+            )}
+          </Pressable>
+
+          {/* Resend Panel */}
+          <View style={styles.resendContainer}>
+            {timer > 0 ? (
+              <Text style={styles.resendMutedText}>Resend code in {timer}s</Text>
+            ) : (
+              <Pressable onPress={handleResendOtp} disabled={resending}>
+                {resending ? (
+                  <ActivityIndicator size="small" color={THEME.colors.primary} />
+                ) : (
+                  <Text style={styles.resendActiveText}>Resend OTP</Text>
+                )}
+              </Pressable>
+            )}
+          </View>
+          
+          <Text style={styles.demoMutedText}>Demo tip: Enter "123456"</Text>
         </View>
-        
-        <Text style={styles.demoMutedText}>Demo tip: Enter "123456"</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: THEME.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,

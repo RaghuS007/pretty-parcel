@@ -163,25 +163,48 @@ export default function AccountScreen() {
   return (
     <View style={styles.outerContainer}>
       <DesktopHeader />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, isDesktop && { paddingHorizontal: 0 }]}>
         
-        {/* Profile Card Header */}
-        {!isDesktop && (
-          <View style={styles.profileHeaderCard}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarLetter}>
-                {user.name.charAt(0).toUpperCase()}
-              </Text>
+        {/* Profile Banner - shown on all screen sizes */}
+        <View style={[styles.profileHeaderCard, isDesktop && styles.profileHeaderCardDesktop]}>
+          {isDesktop ? (
+            // Desktop horizontal profile banner
+            <View style={styles.desktopProfileInner}>
+              <View style={[styles.avatarCircle, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+                <Text style={[styles.avatarLetter, { color: THEME.colors.white }]}>
+                  {user.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={[styles.profileName, { color: THEME.colors.white }]}>{user.name}</Text>
+                <Text style={[styles.profileMobile, { color: "rgba(255,255,255,0.75)" }]}>+91 {user.mobile}</Text>
+              </View>
+              <Pressable
+                onPress={handleLogout}
+                style={({ pressed }) => [styles.desktopLogoutBtn, pressed && { opacity: 0.8 }]}
+              >
+                <Feather name="log-out" size={14} color={THEME.colors.white} style={{ marginRight: 6 }} />
+                <Text style={styles.desktopLogoutBtnText}>Logout</Text>
+              </Pressable>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user.name}</Text>
-              <Text style={styles.profileMobile}>+91 {user.mobile}</Text>
-            </View>
-            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-              <Feather name="log-out" size={16} color={THEME.colors.error} />
-            </Pressable>
-          </View>
-        )}
+          ) : (
+            // Mobile inline row
+            <>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarLetter}>
+                  {user.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user.name}</Text>
+                <Text style={styles.profileMobile}>+91 {user.mobile}</Text>
+              </View>
+              <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+                <Feather name="log-out" size={16} color={THEME.colors.error} />
+              </Pressable>
+            </>
+          )}
+        </View>
 
         {/* Admin Dashboard Entry Panel */}
         {user.role === "admin" && (
@@ -204,7 +227,7 @@ export default function AccountScreen() {
         )}
 
         {/* Overview KPIs metrics */}
-        <View style={styles.kpiRow}>
+        <View style={[styles.kpiRow, isDesktop && { maxWidth: 1100, width: "100%", alignSelf: "center" }]}>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{orders.length}</Text>
             <Text style={styles.kpiLabel}>Orders</Text>
@@ -220,7 +243,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Wishlist Section */}
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1100, width: "100%", alignSelf: "center" }]}>
           <Text style={styles.sectionTitle}>My Wishlist ({wishlistedProducts.length})</Text>
           {wishlistedProducts.length === 0 ? (
             <View style={styles.emptyBox}>
@@ -244,7 +267,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Order History Section */}
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1100, width: "100%", alignSelf: "center" }]}>
           <Text style={styles.sectionTitle}>Order History ({orders.length})</Text>
           {orders.length === 0 ? (
             <View style={styles.emptyBox}>
@@ -293,7 +316,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Saved Addresses Section */}
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1100, width: "100%", alignSelf: "center" }]}>
           <Text style={styles.sectionTitle}>Saved Delivery Locations</Text>
           <View style={styles.addressesContainer}>
             {DEFAULT_ADDRESSES.map((addr) => (
@@ -319,7 +342,7 @@ export default function AccountScreen() {
 
         {/* Recently Viewed Section */}
         {recentlyViewedProducts.length > 0 && (
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, isDesktop && { maxWidth: 1100, width: "100%", alignSelf: "center" }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recently Viewed</Text>
               <Pressable onPress={clearViewed}>
@@ -448,7 +471,35 @@ const styles = StyleSheet.create({
     padding: THEME.spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: THEME.colors.border,
-    paddingTop: 60, // Safety margin for status bars
+    paddingTop: 60, // Safety margin for status bars on mobile
+  },
+  profileHeaderCardDesktop: {
+    paddingTop: THEME.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.colors.border,
+    backgroundColor: THEME.colors.primary,
+  },
+  desktopProfileInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    maxWidth: 1100,
+    width: "100%",
+    alignSelf: "center",
+  },
+  desktopLogoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: THEME.radius.round,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
+  },
+  desktopLogoutBtnText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 13,
+    color: THEME.colors.white,
   },
   avatarCircle: {
     width: 52,
@@ -457,6 +508,8 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.primary,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   avatarLetter: {
     fontFamily: THEME.fonts.display.medium,

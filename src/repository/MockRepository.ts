@@ -2,6 +2,7 @@ import { IProductRepository, ICouponRepository, IOrderRepository, IAuthRepositor
 import { Product, Coupon, Order, User } from "../data/types";
 import { MOCK_PRODUCTS, MOCK_COUPONS } from "../data/mockProducts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useStore } from "../store/useStore";
 
 // Helper to simulate network latency
 const delay = (ms = 400) => new Promise(resolve => setTimeout(resolve, ms));
@@ -159,6 +160,13 @@ export class MockOrderRepository implements IOrderRepository {
   async getOrders(mobile: string): Promise<Order[]> {
     await delay();
     try {
+      const userKey = `@pretty_parcel_orders_${mobile}`;
+      const userOrdersJson = await AsyncStorage.getItem(userKey);
+      if (userOrdersJson) {
+        return JSON.parse(userOrdersJson);
+      }
+      
+      // Fallback: search global list for legacy orders
       const ordersJson = await AsyncStorage.getItem(this.STORAGE_KEY);
       if (ordersJson) {
         const allOrders: Order[] = JSON.parse(ordersJson);
@@ -173,10 +181,21 @@ export class MockOrderRepository implements IOrderRepository {
   async createOrder(order: Order): Promise<Order> {
     await delay();
     try {
+      const mobile = useStore.getState().user?.mobile || order.shippingAddress.phone;
+      const userKey = `@pretty_parcel_orders_${mobile}`;
+      
+      // Save to user-scoped key
+      const userOrdersJson = await AsyncStorage.getItem(userKey);
+      const userOrders: Order[] = userOrdersJson ? JSON.parse(userOrdersJson) : [];
+      userOrders.unshift(order);
+      await AsyncStorage.setItem(userKey, JSON.stringify(userOrders));
+
+      // Also save to global list for admin dashboard
       const ordersJson = await AsyncStorage.getItem(this.STORAGE_KEY);
       const allOrders: Order[] = ordersJson ? JSON.parse(ordersJson) : [];
       allOrders.unshift(order);
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(allOrders));
+
       return order;
     } catch (e) {
       console.error("Failed to save mock order:", e);
@@ -203,6 +222,24 @@ export class MockOrderRepository implements IOrderRepository {
         const allOrders: Order[] = JSON.parse(ordersJson);
         const updated = allOrders.map(o => o.id === orderId ? { ...o, status } : o);
         await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
+
+        // Also update the status in the user-scoped repository list
+        // by finding which user key contains this order
+        for (let i = 0; i < allOrders.length; i++) {
+          const o = allOrders[i];
+          if (o.id === orderId) {
+            // Find mobile from shipping address or store state
+            const mobile = o.shippingAddress.phone;
+            const userKey = `@pretty_parcel_orders_${mobile}`;
+            const userOrdersJson = await AsyncStorage.getItem(userKey);
+            if (userOrdersJson) {
+              const userOrders: Order[] = JSON.parse(userOrdersJson);
+              const userUpdated = userOrders.map(x => x.id === orderId ? { ...x, status } : x);
+              await AsyncStorage.setItem(userKey, JSON.stringify(userUpdated));
+            }
+            break;
+          }
+        }
       }
     } catch (e) {
       console.error("Failed to update mock order status:", e);

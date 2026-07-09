@@ -8,12 +8,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { AuthRepository } from "../../src/repository";
 import { THEME } from "../../src/constants/theme";
 import { useStore } from "../../src/store/useStore";
+import { DesktopHeader } from "../../src/components/DesktopHeader";
 
 export default function LoginScreen() {
   const [name, setName] = useState("");
@@ -80,97 +82,106 @@ export default function LoginScreen() {
     }
   };
 
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const isFormValid = name.trim().length >= 2 && /^[6-9]\d{9}$/.test(mobile);
   const isDisabled = loading || !isFormValid;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <Pressable onPress={() => router.back()} style={styles.backBtn}>
-        <Feather name="arrow-left" size={20} color={THEME.colors.text} />
-      </Pressable>
-
-      <View style={styles.innerCard}>
-        <Text style={styles.brandTitle}>The Pretty Parcel</Text>
-        <Text style={styles.title}>Join The Parcel Club ✨</Text>
-        <Text style={styles.subtitle}>
-          Track your orders, customize delivery profiles, and unlock member-only gold promotions.
-        </Text>
-
-        {/* Inputs */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>YOUR NAME</Text>
-          <View style={[styles.inputContainer, nameError ? styles.inputContainerError : null]}>
-            <Feather name="user" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. Ananya Sharma"
-              placeholderTextColor={THEME.colors.inkSoft}
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (text.trim().length >= 2) {
-                  setNameError("");
-                }
-              }}
-            />
-          </View>
-          {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>MOBILE PHONE</Text>
-          <View style={[styles.inputContainer, mobileError ? styles.inputContainerError : null]}>
-            <Feather name="phone" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. 9876543210"
-              placeholderTextColor={THEME.colors.inkSoft}
-              value={mobile}
-              onChangeText={(text) => {
-                const clean = text.replace(/[^0-9]/g, "");
-                setMobile(clean);
-                if (clean.length === 0 || /^[6-9]\d{9}$/.test(clean)) {
-                  setMobileError("");
-                } else if (clean.length > 0 && !/^[6-9]/.test(clean)) {
-                  setMobileError("Indian mobile number must start with 6-9.");
-                } else if (clean.length < 10) {
-                  setMobileError("Must be exactly 10 digits.");
-                }
-              }}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
-          </View>
-          {mobileError ? <Text style={styles.errorText}>{mobileError}</Text> : null}
-        </View>
-
-        <Pressable
-          onPress={handleSendOtp}
-          disabled={isDisabled}
-          style={({ pressed }) => [
-            styles.submitBtn,
-            pressed && !isDisabled && styles.submitBtnPressed,
-            isDisabled && styles.submitBtnDisabled,
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color={THEME.colors.white} />
-          ) : (
-            <>
-              <Text style={styles.submitBtnText}>Get Verification Code</Text>
-              <Feather name="shield" size={14} color={THEME.colors.white} />
-            </>
-          )}
+    <View style={styles.outerContainer}>
+      <DesktopHeader />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={20} color={THEME.colors.text} />
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={[styles.innerCard, isDesktop && { maxWidth: 500, width: "100%", alignSelf: "center" }]}>
+          <Text style={styles.brandTitle}>The Pretty Parcel</Text>
+          <Text style={styles.title}>Join The Parcel Club ✨</Text>
+          <Text style={styles.subtitle}>
+            Track your orders, customize delivery profiles, and unlock member-only gold promotions.
+          </Text>
+
+          {/* Inputs */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>YOUR NAME</Text>
+            <View style={[styles.inputContainer, nameError ? styles.inputContainerError : null]}>
+              <Feather name="user" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Ananya Sharma"
+                placeholderTextColor={THEME.colors.inkSoft}
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (text.trim().length >= 2) {
+                    setNameError("");
+                  }
+                }}
+              />
+            </View>
+            {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>MOBILE PHONE</Text>
+            <View style={[styles.inputContainer, mobileError ? styles.inputContainerError : null]}>
+              <Feather name="phone" size={16} color={THEME.colors.secondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. 9876543210"
+                placeholderTextColor={THEME.colors.inkSoft}
+                value={mobile}
+                onChangeText={(text) => {
+                  const clean = text.replace(/[^0-9]/g, "");
+                  setMobile(clean);
+                  if (clean.length === 0 || /^[6-9]\d{9}$/.test(clean)) {
+                    setMobileError("");
+                  } else if (clean.length > 0 && !/^[6-9]/.test(clean)) {
+                    setMobileError("Indian mobile number must start with 6-9.");
+                  } else if (clean.length < 10) {
+                    setMobileError("Must be exactly 10 digits.");
+                  }
+                }}
+                keyboardType="phone-pad"
+                maxLength={10}
+              />
+            </View>
+            {mobileError ? <Text style={styles.errorText}>{mobileError}</Text> : null}
+          </View>
+
+          <Pressable
+            onPress={handleSendOtp}
+            disabled={isDisabled}
+            style={({ pressed }) => [
+              styles.submitBtn,
+              pressed && !isDisabled && styles.submitBtnPressed,
+              isDisabled && styles.submitBtnDisabled,
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={THEME.colors.white} />
+            ) : (
+              <>
+                <Text style={styles.submitBtnText}>Get Verification Code</Text>
+                <Feather name="shield" size={14} color={THEME.colors.white} />
+              </>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: THEME.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: THEME.colors.background,

@@ -21,9 +21,12 @@ export const DesktopHeader: React.FC = () => {
   if (!isDesktop) return null;
 
   const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    const q = searchQuery.trim();
+    setSearchQuery("");
     router.push({
       pathname: "/(tabs)/shop",
-      params: { search: searchQuery },
+      params: { search: q },
     });
   };
 

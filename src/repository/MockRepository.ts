@@ -51,6 +51,12 @@ export class MockProductRepository implements IProductRepository {
     return products.filter(p => p.isNew);
   }
 
+  async getAdminProducts(): Promise<Product[]> {
+    await delay();
+    const products = await this.getMergedProducts();
+    return products.map(p => ({ ...p, isActive: p.isActive !== false }));
+  }
+
   async updateProduct(product: Product): Promise<Product> {
     await delay();
     try {
@@ -64,7 +70,8 @@ export class MockProductRepository implements IProductRepository {
         isNew: product.isNew,
         tags: product.tags,
         material: product.material,
-        collection: product.collection
+        collection: product.collection,
+        isActive: product.isActive
       };
       await AsyncStorage.setItem(this.OVERLAY_KEY, JSON.stringify(overlays));
     } catch (e) {

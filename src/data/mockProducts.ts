@@ -23,6 +23,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "necklace",
     images: [],
+    isActive: true,
   },
   {
     id: "p02",
@@ -40,6 +41,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "earring",
     images: [],
+    isActive: true,
   },
   {
     id: "p03",
@@ -57,6 +59,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "bracelet",
     images: [],
+    isActive: true,
   },
   {
     id: "p04",
@@ -74,6 +77,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "ring",
     images: [],
+    isActive: true,
   },
   {
     id: "p05",
@@ -91,6 +95,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "anklet",
     images: [],
+    isActive: true,
   },
   {
     id: "p06",
@@ -108,6 +113,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "set",
     images: [],
+    isActive: true,
   },
   {
     id: "p07",
@@ -125,6 +131,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "necklace",
     images: [],
+    isActive: true,
   },
   {
     id: "p08",
@@ -142,6 +149,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "jhumka",
     images: [],
+    isActive: true,
   },
   {
     id: "p09",
@@ -159,6 +167,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "pendant",
     images: [],
+    isActive: true,
   },
   {
     id: "p10",
@@ -176,6 +185,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "bangle",
     images: [],
+    isActive: true,
   },
   {
     id: "p11",
@@ -193,6 +203,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "claw",
     images: [],
+    isActive: true,
   },
   {
     id: "p12",
@@ -210,6 +221,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "clip",
     images: [],
+    isActive: true,
   },
   {
     id: "p13",
@@ -227,6 +239,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "band",
     images: [],
+    isActive: true,
   },
   {
     id: "p14",
@@ -244,6 +257,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: false,
     icon: "scrunchie",
     images: [],
+    isActive: true,
   },
   {
     id: "p15",
@@ -261,6 +275,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "bow",
     images: [],
+    isActive: true,
   },
   {
     id: "p16",
@@ -278,6 +293,7 @@ export const MOCK_PRODUCTS: Product[] = [
     isNew: true,
     icon: "earring",
     images: [],
+    isActive: true,
   },
 ];
 

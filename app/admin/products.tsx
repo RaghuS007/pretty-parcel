@@ -40,12 +40,31 @@ export default function AdminProducts() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await ProductRepository.getProducts();
+      const data = await ProductRepository.getAdminProducts();
       setProducts(data);
     } catch (e) {
       console.error("Failed to load products:", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleArchive = async (p: Product) => {
+    const updated: Product = { ...p, isActive: !p.isActive };
+    try {
+      await ProductRepository.updateProduct(updated);
+      setProducts(prev => prev.map(item => item.id === updated.id ? updated : item));
+      showToast({
+        type: "success",
+        title: updated.isActive ? "Product Unarchived" : "Product Archived",
+        message: `${updated.name} is now ${updated.isActive ? "visible" : "hidden"} to customers.`,
+      });
+    } catch (e) {
+      showToast({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update product status.",
+      });
     }
   };
 
@@ -242,6 +261,11 @@ export default function AdminProducts() {
                 {p.collection} &bull; {p.sub}
               </Text>
               <View style={styles.flagsRow}>
+                {!p.isActive && (
+                  <View style={[styles.flagBadge, styles.archivedBadge]}>
+                    <Text style={styles.flagText}>Archived</Text>
+                  </View>
+                )}
                 {p.bestseller && (
                   <View style={[styles.flagBadge, styles.bestsellerBadge]}>
                     <Text style={styles.flagText}>Bestseller</Text>
@@ -257,7 +281,20 @@ export default function AdminProducts() {
             <View style={styles.productCellPrice}>
               <Text style={styles.priceText}>₹{p.price.toLocaleString("en-IN")}</Text>
               <Text style={styles.mrpText}>₹{p.mrp.toLocaleString("en-IN")}</Text>
-              <Feather name="edit-2" size={12} color={THEME.colors.primary} style={styles.editIcon} />
+              <View style={styles.rowActions}>
+                <Pressable
+                  onPress={() => handleToggleArchive(p)}
+                  style={styles.archiveBtn}
+                  hitSlop={8}
+                >
+                  <Feather
+                    name={p.isActive ? "archive" : "rotate-ccw"}
+                    size={12}
+                    color={p.isActive ? THEME.colors.error : THEME.colors.primary}
+                  />
+                </Pressable>
+                <Feather name="edit-2" size={12} color={THEME.colors.primary} style={styles.editIcon} />
+              </View>
             </View>
           </Pressable>
         ))}
@@ -523,6 +560,9 @@ const styles = StyleSheet.create({
   newBadge: {
     backgroundColor: "#FFE9E0",
   },
+  archivedBadge: {
+    backgroundColor: THEME.colors.border,
+  },
   flagText: {
     fontFamily: THEME.fonts.body.medium,
     fontSize: 8,
@@ -544,8 +584,15 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     marginTop: 2,
   },
-  editIcon: {
+  editIcon: {},
+  rowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 4,
+  },
+  archiveBtn: {
+    padding: 2,
   },
   emptyContainer: {
     paddingVertical: 40,

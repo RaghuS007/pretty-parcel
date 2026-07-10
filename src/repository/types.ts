@@ -5,6 +5,7 @@ export interface IProductRepository {
   getProductById(id: string): Promise<Product | null>;
   getBestsellers(): Promise<Product[]>;
   getNewArrivals(): Promise<Product[]>;
+  getAdminProducts(): Promise<Product[]>;
   updateProduct(product: Product): Promise<Product>;
 }
 

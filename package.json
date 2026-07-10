@@ -46,6 +46,8 @@
     "db:seed": "wrangler d1 execute pretty-parcel-db --remote --file server/seed.sql",
     "db:migrate:local": "wrangler d1 execute pretty-parcel-db -c server/wrangler.dev.toml --persist-to .wrangler/state --local --file server/migrations/0001_init.sql",
     "db:seed:local": "wrangler d1 execute pretty-parcel-db -c server/wrangler.dev.toml --persist-to .wrangler/state --local --file server/seed.sql",
+    "db:migrate:0002": "wrangler d1 execute pretty-parcel-db --remote --file server/migrations/0002_product_is_active.sql",
+    "db:migrate:0002:local": "wrangler d1 execute pretty-parcel-db -c server/wrangler.dev.toml --persist-to .wrangler/state --local --file server/migrations/0002_product_is_active.sql",
     "deploy": "expo export --platform web && wrangler deploy"
   },
   "private": true

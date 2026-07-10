@@ -84,6 +84,8 @@ export default {
           return await withAdmin(req, env, listAllOrders);
         case "POST /admin/orders/status":
           return await withAdmin(req, env, updateOrderStatus);
+        case "GET /admin/products":
+          return await withAdmin(req, env, listAllProducts);
         case "PUT /admin/products":
           return await withAdmin(req, env, updateProduct);
         case "POST /admin/coupons/active":
@@ -127,14 +129,19 @@ async function listProducts(req: Request, env: Env, url: URL): Promise<Response>
     sort === "popular" ? "ORDER BY bestseller DESC, rating * reviews DESC"
     : sort === "new" ? "ORDER BY is_new DESC, updated_at DESC"
     : "ORDER BY id";
-  const { results } = await env.DB.prepare(`SELECT * FROM products ${orderBy}`).all<ProductRow>();
+  const { results } = await env.DB.prepare(`SELECT * FROM products WHERE is_active = 1 ${orderBy}`).all<ProductRow>();
   return json(req, { products: results.map(serializeProduct) });
 }
 
 async function getProduct(req: Request, env: Env, id: string): Promise<Response> {
   const row = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first<ProductRow>();
-  if (!row) return errorJson(req, "Product not found", 404);
+  if (!row || !row.is_active) return errorJson(req, "Product not found", 404);
   return json(req, { product: serializeProduct(row) });
+}
+
+async function listAllProducts(req: Request, env: Env): Promise<Response> {
+  const { results } = await env.DB.prepare("SELECT * FROM products ORDER BY id").all<ProductRow>();
+  return json(req, { products: results.map(serializeProduct) });
 }
 
 async function updateProduct(req: Request, env: Env): Promise<Response> {
@@ -150,7 +157,7 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
 
   await env.DB.prepare(
     `UPDATE products SET name = ?, price_paise = ?, mrp_paise = ?, bestseller = ?, is_new = ?,
-       tags = ?, material = ?, collection = ?, images = ?, updated_at = unixepoch()
+       tags = ?, material = ?, collection = ?, images = ?, is_active = ?, updated_at = unixepoch()
      WHERE id = ?`
   ).bind(
     typeof body.name === "string" && body.name.trim() ? body.name.trim() : existing.name,
@@ -162,6 +169,7 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
     typeof body.material === "string" ? body.material : existing.material,
     typeof body.collection === "string" ? body.collection : existing.collection,
     Array.isArray(body.images) ? JSON.stringify(body.images) : existing.images,
+    typeof body.isActive === "boolean" ? (body.isActive ? 1 : 0) : existing.is_active,
     body.id
   ).run();
 
@@ -346,9 +354,9 @@ async function createOrder(req: Request, env: Env, user: SessionUser): Promise<R
   const ids = [...qtyById.keys()];
   const placeholders = ids.map(() => "?").join(",");
   const { results: products } = await env.DB.prepare(
-    `SELECT id, price_paise FROM products WHERE id IN (${placeholders})`
-  ).bind(...ids).all<{ id: string; price_paise: number }>();
-  if (products.length !== ids.length) {
+    `SELECT id, price_paise, is_active FROM products WHERE id IN (${placeholders})`
+  ).bind(...ids).all<{ id: string; price_paise: number; is_active: number }>();
+  if (products.length !== ids.length || products.some((p) => !p.is_active)) {
     return errorJson(req, "Some items in your cart are no longer available", 400);
   }
 

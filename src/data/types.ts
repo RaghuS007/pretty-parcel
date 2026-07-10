@@ -18,6 +18,7 @@ export interface Product {
   isNew: boolean;
   icon: string;  // Leftover from HTML SVG mappings
   images: string[]; // Renders remote URLs, falls back to local SVG components
+  isActive: boolean;
 }
 
 export interface Review {

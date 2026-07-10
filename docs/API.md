@@ -13,11 +13,14 @@ Session = HttpOnly cookie `pp_session` (30 d, SHA-256 hashed in `sessions` table
 | POST | `/api/auth/logout` | — | `{ok}` + clears cookie |
 
 ## Catalog
+Only active products (`isActive: true`) are visible to customers: `GET /api/products` excludes inactive rows for every sort, and `GET /api/products/:id` 404s if the product is inactive. Ordering an inactive product returns 400 "Some items in your cart are no longer available".
+
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/products?sort=popular\|new` | `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[]}]}` |
-| GET | `/api/products/:id` | `{product}` or 404 |
-| PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields}` (paise prices) → `{product}` updated |
+| GET | `/api/products?sort=popular\|new` | Active products only. `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[],isActive}]}` |
+| GET | `/api/products/:id` | `{product}` or 404 (also 404 if inactive) |
+| GET | `/api/admin/products` 👑 | All products, including inactive ones → `{products:[...]}` |
+| PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields, isActive?}` (paise prices) → `{product}` updated |
 
 ## Coupons
 Coupon values are **rupees** (`pct`: percent; `flat`: whole ₹; `min`: rupee threshold).

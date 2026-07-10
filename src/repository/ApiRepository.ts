@@ -33,6 +33,7 @@ function mapProduct(p: any): Product {
     isNew: p.isNew || false,
     icon: p.icon || "",
     images: p.images || [],
+    isActive: p.isActive !== false,
   };
 }
 
@@ -86,6 +87,18 @@ export class ApiProductRepository implements IProductRepository {
     }
   }
 
+  async getAdminProducts(): Promise<Product[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/products`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch admin products");
+      const data = await res.json();
+      return (data.products || []).map(mapProduct);
+    } catch (e) {
+      console.error("Error in getAdminProducts:", e);
+      return [];
+    }
+  }
+
   async updateProduct(product: Product): Promise<Product> {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/products`, {
@@ -101,7 +114,8 @@ export class ApiProductRepository implements IProductRepository {
           isNew: product.isNew,
           tags: product.tags,
           material: product.material,
-          collection: product.collection
+          collection: product.collection,
+          isActive: product.isActive
         })
       });
       if (!res.ok) throw new Error("Failed to update product");

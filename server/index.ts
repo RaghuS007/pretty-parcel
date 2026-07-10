@@ -96,6 +96,8 @@ export default {
           return await withAdmin(req, env, updateOrderStatus);
         case "GET /admin/products":
           return await withAdmin(req, env, listAllProducts);
+        case "POST /admin/products":
+          return await withAdmin(req, env, createProduct);
         case "PUT /admin/products":
           return await withAdmin(req, env, updateProduct);
         case "POST /admin/coupons/active":
@@ -239,7 +241,55 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
   return json(req, { product: serializeProduct(updated!) });
 }
 
+async function createProduct(req: Request, env: Env): Promise<Response> {
+  const body = await readBody(req);
+  if (!body) return errorJson(req, "Request body is required", 400);
+
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const cat = typeof body.cat === "string" ? body.cat.trim() : "";
+  const sub = typeof body.sub === "string" ? body.sub.trim() : "";
+
+  if (!name) return errorJson(req, "Product name is required", 400);
+  if (!["demi-fine", "oxidised", "hair"].includes(cat)) {
+    return errorJson(req, "Category must be one of: demi-fine, oxidised, hair", 400);
+  }
+  if (!sub) return errorJson(req, "Subcategory is required", 400);
+
+  const pricePaise = Number.isFinite(body.pricePaise) ? Math.round(body.pricePaise) : 0;
+  const mrpPaise = Number.isFinite(body.mrpPaise) ? Math.round(body.mrpPaise) : pricePaise;
+  if (pricePaise <= 0) return errorJson(req, "Price must be positive", 400);
+
+  const stockQuantity = Number.isInteger(body.stockQuantity) && body.stockQuantity >= 0 ? body.stockQuantity : 0;
+
+  const id = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO products (id, name, cat, sub, price_paise, mrp_paise, material, collection,
+       tags, bestseller, is_new, icon, images, is_active, stock_quantity)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    id,
+    name,
+    cat,
+    sub,
+    pricePaise,
+    mrpPaise,
+    typeof body.material === "string" ? body.material : "",
+    typeof body.collection === "string" ? body.collection : "",
+    Array.isArray(body.tags) ? JSON.stringify(body.tags) : "[]",
+    body.bestseller ? 1 : 0,
+    body.isNew ? 1 : 0,
+    typeof body.icon === "string" ? body.icon : "",
+    Array.isArray(body.images) ? JSON.stringify(body.images) : "[]",
+    body.isActive === false ? 0 : 1,
+    stockQuantity,
+  ).run();
+
+  const row = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first<ProductRow>();
+  return json(req, { product: serializeProduct(row!) }, 201);
+}
+
 // ---------- images (R2) ----------
+
 
 async function uploadImage(req: Request, env: Env): Promise<Response> {
   let formData: FormData;
@@ -399,7 +449,8 @@ async function verifyOtp(req: Request, env: Env): Promise<Response> {
 
   const user = await env.DB.prepare("SELECT mobile, name, role FROM users WHERE mobile = ?")
     .bind(mobile).first<SessionUser>();
-  return json(req, { user }, 200, { "Set-Cookie": sessionCookie(token, SESSION_TTL_SECONDS) });
+  const isDev = env.OTP_DEV_MODE !== "false";
+  return json(req, { user }, 200, { "Set-Cookie": sessionCookie(token, SESSION_TTL_SECONDS, isDev) });
 }
 
 async function logout(req: Request, env: Env): Promise<Response> {
@@ -407,7 +458,8 @@ async function logout(req: Request, env: Env): Promise<Response> {
   if (token) {
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
   }
-  return json(req, { ok: true }, 200, { "Set-Cookie": sessionCookie("", 0) });
+  const isDev = env.OTP_DEV_MODE !== "false";
+  return json(req, { ok: true }, 200, { "Set-Cookie": sessionCookie("", 0, isDev) });
 }
 
 async function me(req: Request, env: Env): Promise<Response> {

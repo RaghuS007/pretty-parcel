@@ -96,6 +96,27 @@ export class MockProductRepository implements IProductRepository {
     return product;
   }
 
+  async createProduct(product: Omit<Product, "id" | "rating" | "reviews">): Promise<Product> {
+    await delay();
+    const newProduct: Product = {
+      ...product,
+      id: `p${Date.now().toString(36)}`,
+      rating: 0,
+      reviews: 0,
+    };
+    try {
+      const json = await AsyncStorage.getItem(this.OVERLAY_KEY);
+      const overlays = json ? JSON.parse(json) : {};
+      overlays[newProduct.id] = newProduct;
+      // Also store the full product in mock data tracking
+      MOCK_PRODUCTS.push(newProduct);
+      await AsyncStorage.setItem(this.OVERLAY_KEY, JSON.stringify(overlays));
+    } catch (e) {
+      console.error("Failed to save new product:", e);
+    }
+    return newProduct;
+  }
+
   async uploadImage(file: Blob): Promise<string> {
     await delay();
     // No backend in demo mode — a blob: object URL previews locally and is

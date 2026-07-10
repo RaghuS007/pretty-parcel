@@ -16,6 +16,15 @@ if (containsLocalhost && isWebProduction) {
   console.warn("EXPO_PUBLIC_API_URL contains localhost in web production. Forcing mock repository mode.");
 }
 
+const originalFetch = globalThis.fetch;
+const fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const res = await originalFetch(input, init);
+  if (res.status === 401) {
+    useStore.getState().logoutUser();
+  }
+  return res;
+};
+
 // Upload responses are same-origin relative URLs ("/api/images/..."), which
 // resolve correctly against document origin once deployed (web + API share
 // an origin). In local dev the API runs on a different port than the Expo
@@ -160,6 +169,41 @@ export class ApiProductRepository implements IProductRepository {
       return product;
     } catch (e) {
       console.error("Error in updateProduct:", e);
+      throw e;
+    }
+  }
+
+  async createProduct(product: Omit<Product, "id" | "rating" | "reviews">): Promise<Product> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: product.name,
+          cat: product.cat,
+          sub: product.sub,
+          pricePaise: Math.round(product.price * 100),
+          mrpPaise: Math.round(product.mrp * 100),
+          material: product.material,
+          collection: product.collection,
+          tags: product.tags,
+          bestseller: product.bestseller,
+          isNew: product.isNew,
+          icon: product.icon,
+          images: product.images,
+          isActive: product.isActive,
+          stockQuantity: product.stockQuantity,
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create product");
+      }
+      const data = await res.json();
+      return mapProduct(data.product);
+    } catch (e) {
+      console.error("Error in createProduct:", e);
       throw e;
     }
   }

@@ -51,13 +51,19 @@ interface ToastState {
   showToast: (toast: ToastMessage | null) => void;
 }
 
+interface AppState {
+  initialLoaded: boolean;
+  setInitialLoaded: (loaded: boolean) => void;
+}
+
 type StoreState = CartState &
   WishlistState &
   RecentlyViewedState &
   AuthState &
   OrdersState &
   CouponState &
-  ToastState;
+  ToastState &
+  AppState;
 
 export const useStore = create<StoreState>()(
   persist(
@@ -145,13 +151,17 @@ export const useStore = create<StoreState>()(
       // --- Toast (Not persisted) ---
       toast: null,
       showToast: (toast) => set({ toast }),
+
+      // --- App State (Not persisted) ---
+      initialLoaded: false,
+      setInitialLoaded: (loaded) => set({ initialLoaded: loaded }),
     }),
     {
       name: "pretty-parcel-store",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => {
-        // Exclude toast from persistence storage to avoid popups on app launch
-        const { toast, ...rest } = state;
+        // Exclude toast and initialLoaded from persistence storage to avoid popups on app launch
+        const { toast, initialLoaded, ...rest } = state;
         return rest;
       },
     }

@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS products (
   is_new INTEGER NOT NULL DEFAULT 0,
   icon TEXT NOT NULL DEFAULT '',
   images TEXT NOT NULL DEFAULT '[]',  -- JSON string[] of URLs
+  is_active INTEGER NOT NULL DEFAULT 1,
+  stock_quantity INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 

@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const recentlyViewedIds = useStore((state) => state.recentlyViewed);
   const clearViewed = useStore((state) => state.clearViewed);
   const showToast = useStore((state) => state.showToast);
+  const setInitialLoaded = useStore((state) => state.setInitialLoaded);
 
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
@@ -73,6 +74,7 @@ export default function HomeScreen() {
         console.error("Error loading products:", err);
       } finally {
         setLoading(false);
+        setInitialLoaded(true);
       }
     }
     loadData();

@@ -76,8 +76,15 @@ export function randomOtp(): string {
   return n.toString().padStart(6, "0");
 }
 
-export function sessionCookie(token: string, maxAge: number): string {
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+export function sessionCookie(token: string, maxAge: number, isDev = false): string {
+  // In local dev the Expo web server (:8081) and API worker (:8787) are
+  // different origins.  `SameSite=None` is needed so the browser sends the
+  // cookie on cross-origin fetch requests.  Chrome treats localhost as a
+  // potentially trustworthy origin, so `Secure` can remain even over HTTP —
+  // but some other browsers don't, so we drop it in dev.
+  const secure = isDev ? "" : " Secure;";
+  const sameSite = isDev ? "None" : "Lax";
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=${sameSite}; Max-Age=${maxAge}`;
 }
 
 export function getCookie(req: Request, name: string): string | null {

@@ -19,34 +19,73 @@ import { THEME } from "../../src/constants/theme";
 import { ProductImage } from "../../src/components/ProductImage";
 import { useStore } from "../../src/store/useStore";
 
+const CATEGORIES: { value: Product["cat"]; label: string }[] = [
+  { value: "demi-fine", label: "Demi-Fine" },
+  { value: "oxidised", label: "Oxidised" },
+  { value: "hair", label: "Hair" },
+];
+
+const SUBCATEGORIES: Record<Product["cat"], string[]> = {
+  "demi-fine": ["Necklaces", "Earrings", "Bracelets", "Rings", "Anklets", "Pendants", "Jewellery Sets"],
+  "oxidised": ["Necklaces", "Earrings", "Pendants", "Bangles", "Rings"],
+  "hair": ["Claw Clips", "Hair Clips", "Hair Bands", "Scrunchies", "Hair Bows"],
+};
+
 // Pulls the R2 key back out of a URL this screen previously uploaded
-// (e.g. "/api/images/products/<uuid>.jpg" -> "products/<uuid>.jpg"), so a
-// replace/remove can best-effort clean up the object it's superseding.
-// Externally pasted URLs won't match and are left alone.
 function extractUploadedKey(url: string): string | null {
   const match = url.match(/\/api\/images\/(products\/[\w-]+\.(?:jpg|jpeg|png|webp))(?:$|[?#])/);
   return match ? match[1] : null;
 }
 
+type ModalMode = "edit" | "create" | null;
+
+interface FormState {
+  name: string;
+  cat: Product["cat"];
+  sub: string;
+  price: string;
+  mrp: string;
+  material: string;
+  collection: string;
+  tags: string;
+  stockQuantity: string;
+  isNew: boolean;
+  bestseller: boolean;
+  imageUrl: string;
+  isActive: boolean;
+}
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  cat: "demi-fine",
+  sub: "Necklaces",
+  price: "",
+  mrp: "",
+  material: "",
+  collection: "",
+  tags: "",
+  stockQuantity: "0",
+  isNew: false,
+  bestseller: false,
+  imageUrl: "",
+  isActive: true,
+};
+
 export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
-  
-  // Edit Modal State
+
+  // Modal state
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editPriceRupees, setEditPriceRupees] = useState("");
-  const [editMrpRupees, setEditMrpRupees] = useState("");
-  const [editTags, setEditTags] = useState("");
-  const [editStockQuantity, setEditStockQuantity] = useState("");
-  const [editIsNew, setEditIsNew] = useState(false);
-  const [editBestseller, setEditBestseller] = useState(false);
-  const [editImageUrl, setEditImageUrl] = useState("");
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const showToast = useStore((state) => state.showToast);
+
+  const updateForm = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
   const loadProducts = async () => {
     try {
@@ -55,27 +94,9 @@ export default function AdminProducts() {
       setProducts(data);
     } catch (e) {
       console.error("Failed to load products:", e);
+      showToast({ type: "error", title: "Load Failed", message: "Could not load product catalog." });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleToggleArchive = async (p: Product) => {
-    const updated: Product = { ...p, isActive: !p.isActive };
-    try {
-      await ProductRepository.updateProduct(updated);
-      setProducts(prev => prev.map(item => item.id === updated.id ? updated : item));
-      showToast({
-        type: "success",
-        title: updated.isActive ? "Product Unarchived" : "Product Archived",
-        message: `${updated.name} is now ${updated.isActive ? "visible" : "hidden"} to customers.`,
-      });
-    } catch (e) {
-      showToast({
-        type: "error",
-        title: "Update Failed",
-        message: "Failed to update product status.",
-      });
     }
   };
 
@@ -83,17 +104,57 @@ export default function AdminProducts() {
     loadProducts();
   }, []);
 
-  const handleEditClick = (p: Product) => {
-    setSelectedProduct(p);
-    setEditName(p.name);
-    setEditPriceRupees(String(p.price));
-    setEditMrpRupees(String(p.mrp));
-    setEditTags(p.tags.join(", "));
-    setEditStockQuantity(String(p.stockQuantity));
-    setEditIsNew(p.isNew);
-    setEditBestseller(p.bestseller);
-    setEditImageUrl(p.images && p.images.length > 0 ? p.images[0] : "");
+  // --- Open modals ---
+
+  const openCreate = () => {
+    setSelectedProduct(null);
+    setForm(EMPTY_FORM);
+    setModalMode("create");
   };
+
+  const openEdit = (p: Product) => {
+    setSelectedProduct(p);
+    setForm({
+      name: p.name,
+      cat: p.cat,
+      sub: p.sub,
+      price: String(p.price),
+      mrp: String(p.mrp),
+      material: p.material,
+      collection: p.collection,
+      tags: p.tags.join(", "),
+      stockQuantity: String(p.stockQuantity ?? 0),
+      isNew: p.isNew,
+      bestseller: p.bestseller,
+      imageUrl: p.images && p.images.length > 0 ? p.images[0] : "",
+      isActive: p.isActive !== false,
+    });
+    setModalMode("edit");
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setSelectedProduct(null);
+  };
+
+  // --- Archive toggle ---
+
+  const handleToggleArchive = async (p: Product) => {
+    const updated: Product = { ...p, isActive: !p.isActive };
+    try {
+      await ProductRepository.updateProduct(updated);
+      setProducts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      showToast({
+        type: "success",
+        title: updated.isActive ? "Product Restored" : "Product Archived",
+        message: `${updated.name} is now ${updated.isActive ? "visible" : "hidden"} to customers.`,
+      });
+    } catch {
+      showToast({ type: "error", title: "Update Failed", message: "Failed to update product status." });
+    }
+  };
+
+  // --- Image upload ---
 
   const handleFileSelect = () => {
     if (Platform.OS === "web") {
@@ -105,83 +166,43 @@ export default function AdminProducts() {
           const file = e.target.files?.[0];
           if (file) {
             const reader = new FileReader();
-            reader.onerror = () => {
-              showToast({
-                type: "error",
-                title: "Read Error",
-                message: "Failed to read the selected photo file.",
-              });
-            };
+            reader.onerror = () =>
+              showToast({ type: "error", title: "Read Error", message: "Failed to read file." });
             reader.onload = (event: any) => {
               if (event.target?.result) {
                 const img = new window.Image();
-                img.onerror = () => {
-                  showToast({
-                    type: "error",
-                    title: "Load Error",
-                    message: "Selected file is not a valid image.",
-                  });
-                };
+                img.onerror = () =>
+                  showToast({ type: "error", title: "Load Error", message: "Not a valid image." });
                 img.onload = () => {
                   try {
                     const canvas = document.createElement("canvas");
-                    const max_size = 400;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                      if (width > max_size) {
-                        height *= max_size / width;
-                        width = max_size;
-                      }
-                    } else {
-                      if (height > max_size) {
-                        width *= max_size / height;
-                        height = max_size;
-                      }
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext("2d");
-                    ctx?.drawImage(img, 0, 0, width, height);
-
-                    // Compress to JPEG at 70% quality, then upload — the
-                    // product record stores the returned URL, never the
-                    // image bytes themselves.
+                    const maxSize = 400;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > maxSize) { h *= maxSize / w; w = maxSize; } }
+                    else { if (h > maxSize) { w *= maxSize / h; h = maxSize; } }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
                     canvas.toBlob(async (blob) => {
                       if (!blob) {
-                        showToast({
-                          type: "error",
-                          title: "Compression Error",
-                          message: "Failed to prepare the photo for upload.",
-                        });
+                        showToast({ type: "error", title: "Error", message: "Failed to compress photo." });
                         return;
                       }
-                      const previousUrl = editImageUrl;
+                      const previousUrl = form.imageUrl;
                       setUploading(true);
                       try {
                         const url = await ProductRepository.uploadImage(blob);
-                        setEditImageUrl(url);
-                        const previousKey = extractUploadedKey(previousUrl);
-                        if (previousKey) {
-                          ProductRepository.deleteImage(previousKey);
-                        }
-                      } catch (err) {
-                        showToast({
-                          type: "error",
-                          title: "Upload Failed",
-                          message: "Failed to upload the photo. Please try again.",
-                        });
+                        updateForm({ imageUrl: url });
+                        const prevKey = extractUploadedKey(previousUrl);
+                        if (prevKey) ProductRepository.deleteImage(prevKey);
+                      } catch {
+                        showToast({ type: "error", title: "Upload Failed", message: "Try again." });
                       } finally {
                         setUploading(false);
                       }
                     }, "image/jpeg", 0.7);
-                  } catch (err) {
-                    showToast({
-                      type: "error",
-                      title: "Compression Error",
-                      message: "Failed to process the selected photo.",
-                    });
+                  } catch {
+                    showToast({ type: "error", title: "Error", message: "Failed to process photo." });
                   }
                 };
                 img.src = event.target.result as string;
@@ -191,80 +212,80 @@ export default function AdminProducts() {
           }
         };
         input.click();
-      } catch (err) {
-        showToast({
-          type: "error",
-          title: "Uploader Error",
-          message: "Failed to open file dialogue on this browser.",
-        });
+      } catch {
+        showToast({ type: "error", title: "Error", message: "Could not open file picker." });
       }
     } else {
-      showToast({
-        type: "info",
-        title: "Web Only",
-        message: "File selection is supported on Web. Please enter a URL on native.",
-      });
+      showToast({ type: "info", title: "Web Only", message: "File selection is web-only. Enter a URL." });
     }
   };
 
+  // --- Save (create or update) ---
+
   const handleSave = async () => {
-    if (!selectedProduct) return;
-    if (!editName.trim()) {
-      showToast({ type: "error", title: "Missing Name", message: "Product name cannot be empty." });
+    if (!form.name.trim()) {
+      showToast({ type: "error", title: "Missing Name", message: "Product name is required." });
       return;
     }
-
-    const priceNum = parseFloat(editPriceRupees);
-    const mrpNum = parseFloat(editMrpRupees);
-
+    const priceNum = parseFloat(form.price);
+    const mrpNum = parseFloat(form.mrp);
     if (isNaN(priceNum) || priceNum <= 0) {
-      showToast({ type: "error", title: "Invalid Price", message: "Enter a valid product price." });
+      showToast({ type: "error", title: "Invalid Price", message: "Enter a valid price." });
       return;
     }
-
-    const stockNum = parseInt(editStockQuantity, 10);
-    if (isNaN(stockNum) || stockNum < 0 || !Number.isInteger(stockNum)) {
-      showToast({ type: "error", title: "Invalid Stock", message: "Enter a valid non-negative stock quantity." });
+    const stockNum = parseInt(form.stockQuantity, 10);
+    if (isNaN(stockNum) || stockNum < 0) {
+      showToast({ type: "error", title: "Invalid Stock", message: "Stock must be a non-negative number." });
       return;
     }
 
     setSaving(true);
     try {
-      const updatedProduct: Product = {
-        ...selectedProduct,
-        name: editName.trim(),
+      const productData = {
+        name: form.name.trim(),
+        cat: form.cat,
+        sub: form.sub,
         price: priceNum,
-        mrp: isNaN(mrpNum) ? priceNum : mrpNum,
-        isNew: editIsNew,
-        bestseller: editBestseller,
-        tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
-        images: editImageUrl.trim() ? [editImageUrl.trim()] : [],
+        mrp: isNaN(mrpNum) || mrpNum <= 0 ? priceNum : mrpNum,
+        material: form.material.trim(),
+        collection: form.collection.trim(),
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        isNew: form.isNew,
+        bestseller: form.bestseller,
+        icon: "",
+        images: form.imageUrl.trim() ? [form.imageUrl.trim()] : [],
+        isActive: form.isActive,
         stockQuantity: stockNum,
       };
 
-      await ProductRepository.updateProduct(updatedProduct);
-      
-      // Update local state list
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-      
-      showToast({
-        type: "success",
-        title: "Product Updated",
-        message: `${updatedProduct.name} saved successfully.`,
-      });
-      setSelectedProduct(null);
-    } catch (e) {
+      if (modalMode === "create") {
+        const created = await ProductRepository.createProduct(productData);
+        setProducts((prev) => [created, ...prev]);
+        showToast({ type: "success", title: "Product Created", message: `${created.name} added to catalog.` });
+      } else if (selectedProduct) {
+        const updated: Product = {
+          ...selectedProduct,
+          ...productData,
+        };
+        await ProductRepository.updateProduct(updated);
+        setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        showToast({ type: "success", title: "Product Updated", message: `${updated.name} saved.` });
+      }
+      closeModal();
+    } catch (e: any) {
       showToast({
         type: "error",
-        title: "Update Failed",
-        message: "Failed to update product database overlay.",
+        title: modalMode === "create" ? "Create Failed" : "Update Failed",
+        message: e?.message || "Something went wrong.",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredProducts = products.filter(p =>
+  // --- Filtering ---
+
+  const filteredProducts = products.filter((p) =>
     [p.name, p.collection, p.sub, ...p.tags].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
@@ -278,40 +299,61 @@ export default function AdminProducts() {
 
   return (
     <View style={styles.container}>
-      {/* Search Header */}
-      <View style={styles.searchBarContainer}>
-        <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search products by name, collection, tag..."
-          placeholderTextColor={THEME.colors.inkSoft}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search ? (
-          <Pressable onPress={() => setSearch("")} style={styles.clearBtn}>
-            <Feather name="x" size={14} color={THEME.colors.secondary} />
-          </Pressable>
-        ) : null}
+      {/* Header Row */}
+      <View style={styles.headerRow}>
+        <View style={styles.searchBarContainer}>
+          <Feather name="search" size={16} color={THEME.colors.secondary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search products by name, collection, tag..."
+            placeholderTextColor={THEME.colors.inkSoft}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search ? (
+            <Pressable onPress={() => setSearch("")} style={styles.clearBtn}>
+              <Feather name="x" size={14} color={THEME.colors.secondary} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Pressable onPress={openCreate} style={styles.addButton}>
+          <Feather name="plus" size={16} color={THEME.colors.white} />
+          <Text style={styles.addButtonText}>Add Product</Text>
+        </Pressable>
+      </View>
+
+      {/* Stats Bar */}
+      <View style={styles.statsBar}>
+        <Text style={styles.statsText}>
+          {products.length} product{products.length !== 1 ? "s" : ""} total
+          {" · "}
+          <Text style={{ color: THEME.colors.success }}>{products.filter((p) => p.isActive !== false).length} active</Text>
+          {" · "}
+          <Text style={{ color: THEME.colors.error }}>{products.filter((p) => p.isActive === false).length} archived</Text>
+        </Text>
       </View>
 
       <ScrollView style={styles.listContainer} contentContainerStyle={styles.listContent}>
-        {filteredProducts.map(p => (
+        {filteredProducts.map((p) => (
           <Pressable
             key={p.id}
-            onPress={() => handleEditClick(p)}
-            style={({ pressed }) => [styles.productRow, pressed && styles.productRowPressed]}
+            onPress={() => openEdit(p)}
+            style={({ pressed }) => [
+              styles.productRow,
+              pressed && styles.productRowPressed,
+              p.isActive === false && styles.productRowArchived,
+            ]}
           >
             <View style={styles.productCellImage}>
               <ProductImage product={p} width={48} height={48} />
             </View>
             <View style={styles.productCellInfo}>
-              <Text style={styles.productName}>{p.name}</Text>
+              <Text style={styles.productName} numberOfLines={1}>{p.name}</Text>
               <Text style={styles.productSub}>
-                {p.collection} &bull; {p.sub}
+                {p.collection ? `${p.collection} · ` : ""}{p.sub}
               </Text>
               <View style={styles.flagsRow}>
-                {!p.isActive && (
+                {p.isActive === false && (
                   <View style={[styles.flagBadge, styles.archivedBadge]}>
                     <Text style={styles.flagText}>Archived</Text>
                   </View>
@@ -330,20 +372,18 @@ export default function AdminProducts() {
             </View>
             <View style={styles.productCellPrice}>
               <Text style={styles.priceText}>₹{p.price.toLocaleString("en-IN")}</Text>
-              <Text style={styles.mrpText}>₹{p.mrp.toLocaleString("en-IN")}</Text>
+              {p.mrp > p.price && (
+                <Text style={styles.mrpText}>₹{p.mrp.toLocaleString("en-IN")}</Text>
+              )}
               <View style={styles.rowActions}>
-                <Pressable
-                  onPress={() => handleToggleArchive(p)}
-                  style={styles.archiveBtn}
-                  hitSlop={8}
-                >
+                <Pressable onPress={() => handleToggleArchive(p)} style={styles.archiveBtn} hitSlop={8}>
                   <Feather
-                    name={p.isActive ? "archive" : "rotate-ccw"}
+                    name={p.isActive !== false ? "archive" : "rotate-ccw"}
                     size={12}
-                    color={p.isActive ? THEME.colors.error : THEME.colors.primary}
+                    color={p.isActive !== false ? THEME.colors.error : THEME.colors.success}
                   />
                 </Pressable>
-                <Feather name="edit-2" size={12} color={THEME.colors.primary} style={styles.editIcon} />
+                <Feather name="edit-2" size={12} color={THEME.colors.primary} />
               </View>
             </View>
           </Pressable>
@@ -351,78 +391,134 @@ export default function AdminProducts() {
 
         {filteredProducts.length === 0 && (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No matching products found.</Text>
+            <Feather name="package" size={40} color={THEME.colors.border} style={{ marginBottom: 12 }} />
+            <Text style={styles.emptyTitle}>No products found</Text>
+            <Text style={styles.emptyText}>
+              {search ? "Try a different search term." : "Add your first product to get started!"}
+            </Text>
+            {!search && (
+              <Pressable onPress={openCreate} style={[styles.addButton, { marginTop: 16 }]}>
+                <Feather name="plus" size={16} color={THEME.colors.white} />
+                <Text style={styles.addButtonText}>Add Product</Text>
+              </Pressable>
+            )}
           </View>
         )}
       </ScrollView>
 
-      {/* Edit Overlay Modal */}
-      {selectedProduct && (
-        <Modal
-          visible={true}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSelectedProduct(null)}
-        >
+      {/* Create / Edit Modal */}
+      {modalMode && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={closeModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Edit Product</Text>
-                <Pressable onPress={() => setSelectedProduct(null)} style={styles.modalCloseBtn}>
+                <Text style={styles.modalTitle}>
+                  {modalMode === "create" ? "Add New Product" : "Edit Product"}
+                </Text>
+                <Pressable onPress={closeModal} style={styles.modalCloseBtn}>
                   <Feather name="x" size={18} color={THEME.colors.text} />
                 </Pressable>
               </View>
 
               <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
-                {/* Product Identifier Block */}
-                <View style={styles.modalProductPreview}>
-                  <ProductImage product={selectedProduct} width={60} height={60} />
-                  <View style={styles.previewTextContainer}>
-                    <Text style={styles.previewId}>ID: {selectedProduct.id}</Text>
-                    <Text style={styles.previewMeta}>Category: {selectedProduct.cat} / {selectedProduct.sub}</Text>
+                {/* Edit preview */}
+                {modalMode === "edit" && selectedProduct && (
+                  <View style={styles.modalProductPreview}>
+                    <ProductImage product={selectedProduct} width={50} height={50} />
+                    <View style={styles.previewTextContainer}>
+                      <Text style={styles.previewId}>ID: {selectedProduct.id}</Text>
+                      <Text style={styles.previewMeta}>
+                        {selectedProduct.cat} / {selectedProduct.sub}
+                      </Text>
+                    </View>
                   </View>
-                </View>
+                )}
 
-                {/* Input Fields */}
+                {/* Name */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>PRODUCT NAME</Text>
+                  <Text style={styles.formLabel}>PRODUCT NAME *</Text>
                   <TextInput
                     style={styles.formInput}
-                    value={editName}
-                    onChangeText={setEditName}
-                    placeholder="Enter name"
+                    value={form.name}
+                    onChangeText={(v) => updateForm({ name: v })}
+                    placeholder="e.g. Aurelia Layered Necklace"
+                    placeholderTextColor={THEME.colors.inkSoft}
                   />
                 </View>
 
-                {/* Image Edit Section */}
+                {/* Category + Sub */}
+                {modalMode === "create" && (
+                  <View style={styles.rowInputs}>
+                    <View style={[styles.formGroup, { flex: 1 }]}>
+                      <Text style={styles.formLabel}>CATEGORY *</Text>
+                      <View style={styles.pickerRow}>
+                        {CATEGORIES.map((c) => (
+                          <Pressable
+                            key={c.value}
+                            onPress={() => updateForm({ cat: c.value, sub: SUBCATEGORIES[c.value][0] })}
+                            style={[styles.pickerChip, form.cat === c.value && styles.pickerChipActive]}
+                          >
+                            <Text
+                              style={[
+                                styles.pickerChipText,
+                                form.cat === c.value && styles.pickerChipTextActive,
+                              ]}
+                            >
+                              {c.label}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {modalMode === "create" && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>SUBCATEGORY *</Text>
+                    <View style={styles.pickerRow}>
+                      {(SUBCATEGORIES[form.cat] || []).map((s) => (
+                        <Pressable
+                          key={s}
+                          onPress={() => updateForm({ sub: s })}
+                          style={[styles.pickerChip, form.sub === s && styles.pickerChipActive]}
+                        >
+                          <Text style={[styles.pickerChipText, form.sub === s && styles.pickerChipTextActive]}>
+                            {s}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Photo */}
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>PRODUCT PHOTO</Text>
                   <View style={styles.imageEditRow}>
-                    {editImageUrl ? (
-                      <Image source={{ uri: editImageUrl }} style={styles.editImagePreview} />
+                    {form.imageUrl ? (
+                      <Image source={{ uri: form.imageUrl }} style={styles.editImagePreview} />
                     ) : (
                       <View style={styles.editImagePlaceholder}>
                         <Feather name="image" size={24} color={THEME.colors.secondary} />
                       </View>
                     )}
                     <View style={styles.imageActionButtons}>
-                      <Pressable
-                        onPress={handleFileSelect}
-                        style={styles.uploadBtn}
-                        disabled={uploading}
-                      >
+                      <Pressable onPress={handleFileSelect} style={styles.uploadBtn} disabled={uploading}>
                         {uploading ? (
                           <ActivityIndicator size="small" color={THEME.colors.primary} />
                         ) : (
-                          <Text style={styles.uploadBtnText}>Select Image File</Text>
+                          <Text style={styles.uploadBtnText}>
+                            <Feather name="upload" size={10} /> Upload
+                          </Text>
                         )}
                       </Pressable>
-                      {editImageUrl ? (
+                      {form.imageUrl ? (
                         <Pressable
                           onPress={() => {
-                            const key = extractUploadedKey(editImageUrl);
+                            const key = extractUploadedKey(form.imageUrl);
                             if (key) ProductRepository.deleteImage(key);
-                            setEditImageUrl("");
+                            updateForm({ imageUrl: "" });
                           }}
                           style={styles.removeBtn}
                           disabled={uploading}
@@ -434,67 +530,104 @@ export default function AdminProducts() {
                   </View>
                   <TextInput
                     style={[styles.formInput, { marginTop: 8 }]}
-                    value={editImageUrl.startsWith("data:") ? "[Base64 Local Image Selected]" : editImageUrl}
-                    onChangeText={(txt) => {
-                      if (!txt.startsWith("[Base64")) {
-                        setEditImageUrl(txt);
-                      }
-                    }}
-                    placeholder="Or enter image URL (http...)"
+                    value={form.imageUrl}
+                    onChangeText={(v) => updateForm({ imageUrl: v })}
+                    placeholder="Or enter image URL (https://...)"
+                    placeholderTextColor={THEME.colors.inkSoft}
                   />
                 </View>
 
+                {/* Price / MRP */}
                 <View style={styles.rowInputs}>
                   <View style={[styles.formGroup, { flex: 1 }]}>
-                    <Text style={styles.formLabel}>PRICE (₹)</Text>
+                    <Text style={styles.formLabel}>PRICE (₹) *</Text>
                     <TextInput
                       style={styles.formInput}
-                      value={editPriceRupees}
-                      onChangeText={setEditPriceRupees}
+                      value={form.price}
+                      onChangeText={(v) => updateForm({ price: v })}
                       keyboardType="numeric"
                       placeholder="e.g. 1499"
+                      placeholderTextColor={THEME.colors.inkSoft}
                     />
                   </View>
                   <View style={[styles.formGroup, { flex: 1 }]}>
                     <Text style={styles.formLabel}>MRP (₹)</Text>
                     <TextInput
                       style={styles.formInput}
-                      value={editMrpRupees}
-                      onChangeText={setEditMrpRupees}
+                      value={form.mrp}
+                      onChangeText={(v) => updateForm({ mrp: v })}
                       keyboardType="numeric"
                       placeholder="e.g. 1899"
+                      placeholderTextColor={THEME.colors.inkSoft}
                     />
                   </View>
                 </View>
 
+                {/* Material / Collection */}
+                <View style={styles.rowInputs}>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={styles.formLabel}>MATERIAL</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={form.material}
+                      onChangeText={(v) => updateForm({ material: v })}
+                      placeholder="e.g. 18k gold plated"
+                      placeholderTextColor={THEME.colors.inkSoft}
+                    />
+                  </View>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={styles.formLabel}>COLLECTION</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={form.collection}
+                      onChangeText={(v) => updateForm({ collection: v })}
+                      placeholder="e.g. Golden Hour"
+                      placeholderTextColor={THEME.colors.inkSoft}
+                    />
+                  </View>
+                </View>
+
+                {/* Tags */}
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>TAGS (comma separated)</Text>
                   <TextInput
                     style={styles.formInput}
-                    value={editTags}
-                    onChangeText={setEditTags}
+                    value={form.tags}
+                    onChangeText={(v) => updateForm({ tags: v })}
                     placeholder="e.g. layered, gold, minimal"
+                    placeholderTextColor={THEME.colors.inkSoft}
                   />
                 </View>
 
+                {/* Stock */}
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>STOCK QUANTITY</Text>
                   <TextInput
-                    style={styles.formInput}
-                    value={editStockQuantity}
-                    onChangeText={setEditStockQuantity}
+                    style={[styles.formInput, { maxWidth: 120 }]}
+                    value={form.stockQuantity}
+                    onChangeText={(v) => updateForm({ stockQuantity: v })}
                     keyboardType="numeric"
-                    placeholder="e.g. 25"
+                    placeholder="0"
+                    placeholderTextColor={THEME.colors.inkSoft}
                   />
                 </View>
 
-                {/* Switches */}
+                {/* Toggle switches */}
                 <View style={styles.switchGroup}>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>Active (visible to customers)</Text>
+                    <Switch
+                      value={form.isActive}
+                      onValueChange={(v) => updateForm({ isActive: v })}
+                      trackColor={{ false: THEME.colors.border, true: THEME.colors.success }}
+                      thumbColor={THEME.colors.white}
+                    />
+                  </View>
                   <View style={styles.switchRow}>
                     <Text style={styles.switchLabel}>Bestseller Flag</Text>
                     <Switch
-                      value={editBestseller}
-                      onValueChange={setEditBestseller}
+                      value={form.bestseller}
+                      onValueChange={(v) => updateForm({ bestseller: v })}
                       trackColor={{ false: THEME.colors.border, true: THEME.colors.primary }}
                       thumbColor={THEME.colors.white}
                     />
@@ -502,8 +635,8 @@ export default function AdminProducts() {
                   <View style={styles.switchRow}>
                     <Text style={styles.switchLabel}>New Arrival Flag</Text>
                     <Switch
-                      value={editIsNew}
-                      onValueChange={setEditIsNew}
+                      value={form.isNew}
+                      onValueChange={(v) => updateForm({ isNew: v })}
                       trackColor={{ false: THEME.colors.border, true: THEME.colors.primary }}
                       thumbColor={THEME.colors.white}
                     />
@@ -511,24 +644,18 @@ export default function AdminProducts() {
                 </View>
               </ScrollView>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setSelectedProduct(null)}
-                  style={styles.cancelBtn}
-                  disabled={saving}
-                >
+                <Pressable onPress={closeModal} style={styles.cancelBtn} disabled={saving}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </Pressable>
-                <Pressable
-                  onPress={handleSave}
-                  style={styles.saveBtn}
-                  disabled={saving}
-                >
+                <Pressable onPress={handleSave} style={styles.saveBtn} disabled={saving}>
                   {saving ? (
                     <ActivityIndicator size="small" color={THEME.colors.white} />
                   ) : (
-                    <Text style={styles.saveBtnText}>Save Changes</Text>
+                    <Text style={styles.saveBtnText}>
+                      {modalMode === "create" ? "Create Product" : "Save Changes"}
+                    </Text>
                   )}
                 </Pressable>
               </View>
@@ -551,11 +678,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: THEME.spacing.lg,
+    paddingTop: THEME.spacing.lg,
+    paddingBottom: THEME.spacing.sm,
+    gap: THEME.spacing.md,
+  },
   searchBarContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: THEME.colors.white,
-    margin: THEME.spacing.lg,
     paddingHorizontal: THEME.spacing.md,
     height: 40,
     borderRadius: THEME.radius.md,
@@ -574,6 +709,30 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: THEME.radius.round,
+    gap: 6,
+    ...THEME.shadows.button,
+  },
+  addButtonText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 12,
+    color: THEME.colors.white,
+  },
+  statsBar: {
+    paddingHorizontal: THEME.spacing.lg,
+    paddingBottom: THEME.spacing.sm,
+  },
+  statsText: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 11,
+    color: THEME.colors.secondary,
   },
   listContainer: {
     flex: 1,
@@ -598,6 +757,9 @@ const styles = StyleSheet.create({
   },
   productRowPressed: {
     backgroundColor: THEME.colors.background,
+  },
+  productRowArchived: {
+    opacity: 0.55,
   },
   productCellImage: {
     marginRight: THEME.spacing.md,
@@ -661,7 +823,6 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     marginTop: 2,
   },
-  editIcon: {},
   rowActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -672,13 +833,20 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: 60,
     alignItems: "center",
+  },
+  emptyTitle: {
+    fontFamily: THEME.fonts.display.medium,
+    fontSize: 16,
+    color: THEME.colors.text,
+    marginBottom: 4,
   },
   emptyText: {
     fontFamily: THEME.fonts.body.regular,
     fontSize: 12,
     color: THEME.colors.secondary,
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,
@@ -693,7 +861,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: THEME.colors.border,
     width: "100%",
-    maxWidth: 480,
+    maxWidth: 520,
     maxHeight: "90%",
     ...THEME.shadows.drawer,
     overflow: "hidden",
@@ -761,6 +929,31 @@ const styles = StyleSheet.create({
     borderRadius: THEME.radius.sm,
     paddingHorizontal: THEME.spacing.md,
     height: 38,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  pickerChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: THEME.radius.round,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    backgroundColor: THEME.colors.background,
+  },
+  pickerChipActive: {
+    backgroundColor: THEME.colors.primary,
+    borderColor: THEME.colors.primary,
+  },
+  pickerChipText: {
+    fontFamily: THEME.fonts.body.medium,
+    fontSize: 11,
+    color: THEME.colors.secondary,
+  },
+  pickerChipTextActive: {
+    color: THEME.colors.white,
   },
   imageEditRow: {
     flexDirection: "row",
@@ -866,7 +1059,7 @@ const styles = StyleSheet.create({
     borderRadius: THEME.radius.round,
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 110,
+    minWidth: 130,
     ...THEME.shadows.button,
   },
   saveBtnText: {

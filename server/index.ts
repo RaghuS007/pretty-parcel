@@ -155,9 +155,14 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
   const mrpPaise = Number.isFinite(body.mrpPaise) ? Math.round(body.mrpPaise) : existing.mrp_paise;
   if (pricePaise <= 0 || mrpPaise <= 0) return errorJson(req, "Prices must be positive", 400);
 
+  if (body.stockQuantity !== undefined && (!Number.isInteger(body.stockQuantity) || body.stockQuantity < 0)) {
+    return errorJson(req, "stockQuantity must be a non-negative integer", 400);
+  }
+  const stockQuantity = body.stockQuantity !== undefined ? body.stockQuantity : existing.stock_quantity;
+
   await env.DB.prepare(
     `UPDATE products SET name = ?, price_paise = ?, mrp_paise = ?, bestseller = ?, is_new = ?,
-       tags = ?, material = ?, collection = ?, images = ?, is_active = ?, updated_at = unixepoch()
+       tags = ?, material = ?, collection = ?, images = ?, is_active = ?, stock_quantity = ?, updated_at = unixepoch()
      WHERE id = ?`
   ).bind(
     typeof body.name === "string" && body.name.trim() ? body.name.trim() : existing.name,
@@ -170,6 +175,7 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
     typeof body.collection === "string" ? body.collection : existing.collection,
     Array.isArray(body.images) ? JSON.stringify(body.images) : existing.images,
     typeof body.isActive === "boolean" ? (body.isActive ? 1 : 0) : existing.is_active,
+    stockQuantity,
     body.id
   ).run();
 
@@ -329,6 +335,12 @@ async function listAllOrders(req: Request, env: Env): Promise<Response> {
   return json(req, { orders: results.map((o) => serializeOrder(o, items.get(o.id) ?? [])) });
 }
 
+function formatStockShortageMessage(shortages: { name: string; available: number }[]): string {
+  return shortages
+    .map((s) => (s.available > 0 ? `Only ${s.available} left of ${s.name}` : `${s.name} is out of stock`))
+    .join("; ");
+}
+
 async function createOrder(req: Request, env: Env, user: SessionUser): Promise<Response> {
   const body = await readBody(req);
   const rawItems: any[] = Array.isArray(body?.items) ? body!.items : [];
@@ -354,10 +366,20 @@ async function createOrder(req: Request, env: Env, user: SessionUser): Promise<R
   const ids = [...qtyById.keys()];
   const placeholders = ids.map(() => "?").join(",");
   const { results: products } = await env.DB.prepare(
-    `SELECT id, price_paise, is_active FROM products WHERE id IN (${placeholders})`
-  ).bind(...ids).all<{ id: string; price_paise: number; is_active: number }>();
+    `SELECT id, name, price_paise, is_active, stock_quantity FROM products WHERE id IN (${placeholders})`
+  ).bind(...ids).all<{ id: string; name: string; price_paise: number; is_active: number; stock_quantity: number }>();
   if (products.length !== ids.length || products.some((p) => !p.is_active)) {
     return errorJson(req, "Some items in your cart are no longer available", 400);
+  }
+
+  // Fast-path availability check. This is advisory only — a concurrent order
+  // can still consume the stock between this check and the batch below, so
+  // it is not itself the source of correctness (the guarded UPDATE is).
+  const shortages = products
+    .filter((p) => qtyById.get(p.id)! > p.stock_quantity)
+    .map((p) => ({ name: p.name, available: p.stock_quantity }));
+  if (shortages.length) {
+    return errorJson(req, formatStockShortageMessage(shortages), 409);
   }
 
   // Server-authoritative pricing: recompute everything from the DB.
@@ -383,6 +405,13 @@ async function createOrder(req: Request, env: Env, user: SessionUser): Promise<R
   const orderNumber = `PP-ORD-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
   const now = Math.floor(Date.now() / 1000);
 
+  // D1 has no interactive transactions — env.DB.batch() is the only atomic
+  // primitive, and it only rolls back when a statement ERRORS. A guarded
+  // UPDATE that matches zero rows does NOT error, it just reports
+  // meta.changes = 0. So we bundle the decrement into the same batch as the
+  // order/order_items inserts (cheap, single round trip for the common
+  // case), then inspect meta.changes per decrement below and manually
+  // compensate if a concurrent order won the race on any item.
   const statements = [
     env.DB.prepare(
       `INSERT INTO orders (id, order_number, mobile, subtotal_paise, discount_paise, shipping_paise,
@@ -395,8 +424,37 @@ async function createOrder(req: Request, env: Env, user: SessionUser): Promise<R
         "INSERT INTO order_items (order_id, product_id, qty, unit_price_paise) VALUES (?, ?, ?, ?)"
       ).bind(orderId, p.id, qtyById.get(p.id)!, p.price_paise)
     ),
+    ...products.map((p) =>
+      env.DB.prepare(
+        "UPDATE products SET stock_quantity = stock_quantity - ?1 WHERE id = ?2 AND stock_quantity >= ?1"
+      ).bind(qtyById.get(p.id)!, p.id)
+    ),
   ];
-  await env.DB.batch(statements);
+  const results = await env.DB.batch(statements);
+
+  // Statements are [order insert, ...order_items inserts, ...stock decrements]
+  // in that fixed order, so this slice aligns 1:1 with `products`.
+  const decrementResults = results.slice(1 + products.length);
+  const failed = products.filter((_, i) => !decrementResults[i].meta.changes);
+
+  if (failed.length) {
+    // Lost the race: someone else's checkout claimed stock between our
+    // fast-path check and this batch committing. Undo what the batch just
+    // did — delete the order we inserted (order_items cascade via
+    // ON DELETE CASCADE) and give back stock only to the items whose
+    // decrement DID succeed — so no partial order or stock drift survives.
+    const succeeded = products.filter((_, i) => decrementResults[i].meta.changes);
+    const compensation = [
+      env.DB.prepare("DELETE FROM orders WHERE id = ?").bind(orderId),
+      ...succeeded.map((p) =>
+        env.DB.prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?")
+          .bind(qtyById.get(p.id)!, p.id)
+      ),
+    ];
+    await env.DB.batch(compensation);
+    const names = failed.map((p) => p.name).join(", ");
+    return errorJson(req, `Sorry, ${names} just sold out while you were checking out. Please update your cart and try again.`, 409);
+  }
 
   const row = await env.DB.prepare("SELECT * FROM orders WHERE id = ?").bind(orderId).first<OrderRow>();
   const items = await orderItemsFor(env, [orderId]);
@@ -410,6 +468,9 @@ async function updateOrderStatus(req: Request, env: Env): Promise<Response> {
   if (!orderNumber || !ORDER_STATUSES.includes(status)) {
     return errorJson(req, "orderId and a valid status are required", 400);
   }
+  // TODO: restock — cancelling an order does not currently return its items'
+  // stock_quantity. Out of scope for now; needs order_items lookup + a
+  // guarded increment batch similar to createOrder()'s decrement.
   const result = await env.DB.prepare("UPDATE orders SET status = ? WHERE order_number = ?")
     .bind(status, orderNumber).run();
   if (!result.meta.changes) return errorJson(req, "Order not found", 404);

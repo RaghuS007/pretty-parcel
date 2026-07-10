@@ -24,6 +24,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "necklace",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p02",
@@ -42,6 +43,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "earring",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p03",
@@ -60,6 +62,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "bracelet",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p04",
@@ -78,6 +81,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "ring",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p05",
@@ -96,6 +100,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "anklet",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p06",
@@ -114,6 +119,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "set",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p07",
@@ -132,6 +138,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "necklace",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p08",
@@ -150,6 +157,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "jhumka",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p09",
@@ -168,6 +176,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "pendant",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p10",
@@ -186,6 +195,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "bangle",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p11",
@@ -204,6 +214,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "claw",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p12",
@@ -222,6 +233,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "clip",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p13",
@@ -240,6 +252,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "band",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p14",
@@ -258,6 +271,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "scrunchie",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p15",
@@ -276,6 +290,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "bow",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
   {
     id: "p16",
@@ -294,6 +309,7 @@ export const MOCK_PRODUCTS: Product[] = [
     icon: "earring",
     images: [],
     isActive: true,
+    stockQuantity: 25,
   },
 ];
 

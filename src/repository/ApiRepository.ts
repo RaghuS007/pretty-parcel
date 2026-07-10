@@ -34,6 +34,7 @@ function mapProduct(p: any): Product {
     icon: p.icon || "",
     images: p.images || [],
     isActive: p.isActive !== false,
+    stockQuantity: typeof p.stockQuantity === "number" ? p.stockQuantity : 0,
   };
 }
 
@@ -115,7 +116,8 @@ export class ApiProductRepository implements IProductRepository {
           tags: product.tags,
           material: product.material,
           collection: product.collection,
-          isActive: product.isActive
+          isActive: product.isActive,
+          stockQuantity: product.stockQuantity
         })
       });
       if (!res.ok) throw new Error("Failed to update product");

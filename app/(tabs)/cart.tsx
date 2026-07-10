@@ -458,44 +458,58 @@ export default function CartScreen() {
 
     return (
       <View style={styles.cartItemsList}>
-        {cartProducts.map(({ product: p, qty }) => (
-          <View key={p.id} style={styles.cartItemRow}>
-            <ProductImage product={p} width={70} height={70} />
-            <View style={styles.cartItemDetails}>
-              <Text style={styles.cartItemCategory}>{p.sub}</Text>
-              <Text style={styles.cartItemName} numberOfLines={1}>
-                {p.name}
-              </Text>
-              <Text style={styles.cartItemPrice}>{formattedValue(p.price)}</Text>
-            </View>
+        {cartProducts.map(({ product: p, qty }) => {
+          const isOutOfStock = p.stockQuantity === 0;
+          const isLowStock = p.stockQuantity > 0 && p.stockQuantity <= 5;
+          return (
+            <View key={p.id} style={styles.cartItemRow}>
+              <ProductImage product={p} width={70} height={70} />
+              <View style={styles.cartItemDetails}>
+                <Text style={styles.cartItemCategory}>{p.sub}</Text>
+                <Text style={styles.cartItemName} numberOfLines={1}>
+                  {p.name}
+                </Text>
+                <Text style={styles.cartItemPrice}>{formattedValue(p.price)}</Text>
+                {isOutOfStock ? (
+                  <Text style={styles.cartStockWarning}>Out of stock</Text>
+                ) : isLowStock ? (
+                  <Text style={styles.cartStockWarning}>Only {p.stockQuantity} left</Text>
+                ) : null}
+              </View>
 
-            {/* Stepper Control and deletion panel */}
-            <View style={styles.cartRightPanel}>
-              <Pressable
-                onPress={() => removeFromCart(p.id)}
-                style={styles.cartItemDeleteBtn}
-              >
-                <Feather name="trash-2" size={14} color={THEME.colors.error} />
-              </Pressable>
+              {/* Stepper Control and deletion panel */}
+              <View style={styles.cartRightPanel}>
+                <Pressable
+                  onPress={() => removeFromCart(p.id)}
+                  style={styles.cartItemDeleteBtn}
+                >
+                  <Feather name="trash-2" size={14} color={THEME.colors.error} />
+                </Pressable>
 
-              <View style={styles.cartStepper}>
-                <Pressable
-                  onPress={() => changeCartQty(p.id, -1)}
-                  style={styles.stepperSubBtn}
-                >
-                  <Feather name="minus" size={10} color={THEME.colors.text} />
-                </Pressable>
-                <Text style={styles.stepperQtyText}>{qty}</Text>
-                <Pressable
-                  onPress={() => changeCartQty(p.id, 1)}
-                  style={styles.stepperSubBtn}
-                >
-                  <Feather name="plus" size={10} color={THEME.colors.text} />
-                </Pressable>
+                <View style={styles.cartStepper}>
+                  <Pressable
+                    onPress={() => changeCartQty(p.id, -1)}
+                    style={styles.stepperSubBtn}
+                  >
+                    <Feather name="minus" size={10} color={THEME.colors.text} />
+                  </Pressable>
+                  <Text style={styles.stepperQtyText}>{qty}</Text>
+                  <Pressable
+                    onPress={() => changeCartQty(p.id, 1)}
+                    style={styles.stepperSubBtn}
+                    disabled={qty >= p.stockQuantity}
+                  >
+                    <Feather
+                      name="plus"
+                      size={10}
+                      color={qty >= p.stockQuantity ? THEME.colors.inkSoft : THEME.colors.text}
+                    />
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     );
   };
@@ -1012,6 +1026,12 @@ const styles = StyleSheet.create({
     fontFamily: THEME.fonts.body.semibold,
     fontSize: 13,
     color: THEME.colors.text,
+  },
+  cartStockWarning: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 10,
+    color: THEME.colors.error,
+    marginTop: 4,
   },
   cartRightPanel: {
     alignItems: "flex-end",

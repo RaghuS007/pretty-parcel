@@ -17,10 +17,10 @@ Only active products (`isActive: true`) are visible to customers: `GET /api/prod
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/products?sort=popular\|new` | Active products only. `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[],isActive}]}` |
+| GET | `/api/products?sort=popular\|new` | Active products only. `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[],isActive,stockQuantity}]}` |
 | GET | `/api/products/:id` | `{product}` or 404 (also 404 if inactive) |
 | GET | `/api/admin/products` 👑 | All products, including inactive ones → `{products:[...]}` |
-| PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields, isActive?}` (paise prices) → `{product}` updated |
+| PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields, isActive?, stockQuantity?}` (paise prices) → `{product}` updated. `stockQuantity` must be a non-negative integer or 400 |
 
 ## Coupons
 Coupon values are **rupees** (`pct`: percent; `flat`: whole ₹; `min`: rupee threshold).
@@ -34,9 +34,13 @@ Coupon values are **rupees** (`pct`: percent; `flat`: whole ₹; `min`: rupee th
 ## Orders
 Server recomputes all prices from D1; client totals are ignored. Shipping: free ≥ ₹999, else ₹79.
 
+Checkout is stock-authoritative: `POST /api/orders` recomputes availability against `products.stock_quantity` and decrements it atomically as part of the same order-insert batch. D1 has no interactive transactions, so a guarded `UPDATE ... WHERE stock_quantity >= ?` that loses a concurrent race is detected after the batch (via `meta.changes`) and compensated (order deleted, stock given back) rather than prevented up front — either way, the client only ever sees a clean success or a clean 409, never a partial order.
+- 409 (fast-path, cart qty exceeds known stock): `{"error": "Only 2 left of Jhilmil Jhumkas"}` (semicolon-joined if multiple items)
+- 409 (race lost to a concurrent checkout after the fast-path check passed): `{"error": "Jhilmil Jhumkas just sold out while you were checking out. Please update your cart and try again."}`
+
 | Method | Path | Body → Response |
 |---|---|---|
-| POST | `/api/orders` 🔒 | `{items:[{id,qty}], couponCode?, shippingAddress, paymentMethod}` → 201 `{order}` |
+| POST | `/api/orders` 🔒 | `{items:[{id,qty}], couponCode?, shippingAddress, paymentMethod}` → 201 `{order}`, or 409 if stock is insufficient |
 | GET | `/api/orders` 🔒 | `{orders:[…]}` (own orders, newest first) |
 | GET | `/api/admin/orders` 👑 | `{orders:[…]}` (all, includes `mobile`) |
 | POST | `/api/admin/orders/status` 👑 | `{orderId: orderNumber, status: processing\|shipped\|delivered\|cancelled}` → `{ok}` |

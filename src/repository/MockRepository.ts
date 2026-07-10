@@ -71,7 +71,8 @@ export class MockProductRepository implements IProductRepository {
         tags: product.tags,
         material: product.material,
         collection: product.collection,
-        isActive: product.isActive
+        isActive: product.isActive,
+        stockQuantity: product.stockQuantity
       };
       await AsyncStorage.setItem(this.OVERLAY_KEY, JSON.stringify(overlays));
     } catch (e) {

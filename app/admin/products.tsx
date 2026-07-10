@@ -30,6 +30,7 @@ export default function AdminProducts() {
   const [editPriceRupees, setEditPriceRupees] = useState("");
   const [editMrpRupees, setEditMrpRupees] = useState("");
   const [editTags, setEditTags] = useState("");
+  const [editStockQuantity, setEditStockQuantity] = useState("");
   const [editIsNew, setEditIsNew] = useState(false);
   const [editBestseller, setEditBestseller] = useState(false);
   const [editImageUrl, setEditImageUrl] = useState("");
@@ -78,6 +79,7 @@ export default function AdminProducts() {
     setEditPriceRupees(String(p.price));
     setEditMrpRupees(String(p.mrp));
     setEditTags(p.tags.join(", "));
+    setEditStockQuantity(String(p.stockQuantity));
     setEditIsNew(p.isNew);
     setEditBestseller(p.bestseller);
     setEditImageUrl(p.images && p.images.length > 0 ? p.images[0] : "");
@@ -179,6 +181,12 @@ export default function AdminProducts() {
       return;
     }
 
+    const stockNum = parseInt(editStockQuantity, 10);
+    if (isNaN(stockNum) || stockNum < 0 || !Number.isInteger(stockNum)) {
+      showToast({ type: "error", title: "Invalid Stock", message: "Enter a valid non-negative stock quantity." });
+      return;
+    }
+
     setSaving(true);
     try {
       const updatedProduct: Product = {
@@ -190,6 +198,7 @@ export default function AdminProducts() {
         bestseller: editBestseller,
         tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
         images: editImageUrl.trim() ? [editImageUrl.trim()] : [],
+        stockQuantity: stockNum,
       };
 
       await ProductRepository.updateProduct(updatedProduct);
@@ -408,6 +417,17 @@ export default function AdminProducts() {
                     value={editTags}
                     onChangeText={setEditTags}
                     placeholder="e.g. layered, gold, minimal"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>STOCK QUANTITY</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={editStockQuantity}
+                    onChangeText={setEditStockQuantity}
+                    keyboardType="numeric"
+                    placeholder="e.g. 25"
                   />
                 </View>
 

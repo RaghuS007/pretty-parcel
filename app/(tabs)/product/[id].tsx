@@ -80,11 +80,12 @@ export default function ProductDetailScreen() {
     loadProductData();
   }, [id]);
 
-  const handleIncrement = () => setQuantity((prev) => prev + 1);
+  const handleIncrement = () =>
+    setQuantity((prev) => Math.min(product ? product.stockQuantity : prev, prev + 1));
   const handleDecrement = () => setQuantity((prev) => Math.max(1, prev - 1));
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || product.stockQuantity === 0) return;
     addToCart(product.id, quantity);
     setAddedFeedback(true);
     setTimeout(() => {
@@ -93,7 +94,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleBuyNow = () => {
-    if (!product) return;
+    if (!product || product.stockQuantity === 0) return;
     addToCart(product.id, quantity);
     router.replace("/(tabs)/cart" as any);
   };
@@ -176,6 +177,8 @@ export default function ProductDetailScreen() {
   const isDesktop = windowWidth >= 768;
   const SCREEN_WIDTH = isDesktop ? Math.min(windowWidth, 1200) / 2 : windowWidth;
   const discountPercent = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const isOutOfStock = product.stockQuantity === 0;
+  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
   const reviewsList = MOCK_REVIEWS_CATALOG[product.cat] || MOCK_REVIEWS_CATALOG["demi-fine"];
   const recommendedItems = getRecommendedProducts();
 
@@ -234,22 +237,33 @@ export default function ProductDetailScreen() {
                   </View>
                 ) : null}
               </View>
+              {isOutOfStock ? (
+                <Text style={styles.outOfStockText}>Out of stock</Text>
+              ) : isLowStock ? (
+                <Text style={styles.lowStockText}>Only {product.stockQuantity} left</Text>
+              ) : null}
               <View style={styles.ctaRow}>
-                <View style={styles.stepperContainer}>
-                  <Pressable onPress={handleDecrement} style={styles.stepperBtn}>
+                <View style={[styles.stepperContainer, isOutOfStock && styles.stepperContainerDisabled]}>
+                  <Pressable onPress={handleDecrement} style={styles.stepperBtn} disabled={isOutOfStock}>
                     <Feather name="minus" size={14} color={THEME.colors.text} />
                   </Pressable>
-                  <Text style={styles.stepperValue}>{quantity}</Text>
-                  <Pressable onPress={handleIncrement} style={styles.stepperBtn}>
+                  <Text style={styles.stepperValue}>{isOutOfStock ? 0 : quantity}</Text>
+                  <Pressable
+                    onPress={handleIncrement}
+                    style={styles.stepperBtn}
+                    disabled={isOutOfStock || quantity >= product.stockQuantity}
+                  >
                     <Feather name="plus" size={14} color={THEME.colors.text} />
                   </Pressable>
                 </View>
                 <Pressable
                   onPress={handleAddToCart}
+                  disabled={isOutOfStock}
                   style={({ pressed }) => [
                     styles.addToCartBtn,
+                    isOutOfStock && styles.addToCartBtnDisabled,
                     addedFeedback && styles.addToCartBtnSuccess,
-                    pressed && styles.addToCartBtnPressed,
+                    pressed && !isOutOfStock && styles.addToCartBtnPressed,
                   ]}
                 >
                   <Feather
@@ -258,15 +272,17 @@ export default function ProductDetailScreen() {
                     color={THEME.colors.white}
                   />
                   <Text style={styles.addToCartText}>
-                    {addedFeedback ? "Added to Parcel!" : "Add to Cart"}
+                    {isOutOfStock ? "Out of Stock" : addedFeedback ? "Added to Parcel!" : "Add to Cart"}
                   </Text>
                 </Pressable>
               </View>
               <Pressable
                 onPress={handleBuyNow}
+                disabled={isOutOfStock}
                 style={({ pressed }) => [
                   styles.buyNowBtn,
-                  pressed && styles.buyNowBtnPressed,
+                  isOutOfStock && styles.addToCartBtnDisabled,
+                  pressed && !isOutOfStock && styles.buyNowBtnPressed,
                 ]}
               >
                 <Feather name="zap" size={15} color={THEME.colors.white} />
@@ -564,6 +580,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: THEME.colors.primary,
   },
+  outOfStockText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 12,
+    color: THEME.colors.error,
+    marginBottom: THEME.spacing.sm,
+  },
+  lowStockText: {
+    fontFamily: THEME.fonts.body.semibold,
+    fontSize: 12,
+    color: THEME.colors.error,
+    marginBottom: THEME.spacing.sm,
+  },
   ctaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -578,6 +606,9 @@ const styles = StyleSheet.create({
     borderRadius: THEME.radius.round,
     backgroundColor: THEME.colors.background,
     overflow: "hidden",
+  },
+  stepperContainerDisabled: {
+    opacity: 0.5,
   },
   stepperBtn: {
     width: 36,
@@ -605,6 +636,10 @@ const styles = StyleSheet.create({
   },
   addToCartBtnSuccess: {
     backgroundColor: THEME.colors.success,
+  },
+  addToCartBtnDisabled: {
+    backgroundColor: THEME.colors.secondary,
+    opacity: 0.5,
   },
   addToCartBtnPressed: {
     opacity: 0.9,

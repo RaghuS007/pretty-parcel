@@ -129,6 +129,7 @@ export interface ProductRow {
   icon: string;
   images: string;
   is_active: number;
+  stock_quantity: number;
 }
 
 export function serializeProduct(row: ProductRow) {
@@ -149,6 +150,7 @@ export function serializeProduct(row: ProductRow) {
     icon: row.icon,
     images: JSON.parse(row.images),
     isActive: !!row.is_active,
+    stockQuantity: row.stock_quantity,
   };
 }
 

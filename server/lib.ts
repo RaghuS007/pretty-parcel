@@ -3,7 +3,7 @@
 
 export interface Env {
   DB: D1Database;
-  IMAGES: R2Bucket;
+  IMAGES?: R2Bucket;
   /** Comma-separated mobile numbers granted the admin role at login. */
   ADMIN_MOBILES: string;
   /** "true" (default) returns the generated OTP in the send-otp response — no SMS provider is wired up. */

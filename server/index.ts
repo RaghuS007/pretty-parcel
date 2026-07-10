@@ -292,6 +292,9 @@ async function createProduct(req: Request, env: Env): Promise<Response> {
 
 
 async function uploadImage(req: Request, env: Env): Promise<Response> {
+  if (!env.IMAGES) {
+    return errorJson(req, "Image uploads are disabled because R2 storage is not configured", 503);
+  }
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -319,6 +322,9 @@ async function uploadImage(req: Request, env: Env): Promise<Response> {
 }
 
 async function deleteImage(req: Request, env: Env): Promise<Response> {
+  if (!env.IMAGES) {
+    return errorJson(req, "Image delete service is disabled", 503);
+  }
   const body = await readBody(req);
   const key = typeof body?.key === "string" ? body.key : "";
   if (!SAFE_IMAGE_KEY_RE.test(key)) {
@@ -329,6 +335,9 @@ async function deleteImage(req: Request, env: Env): Promise<Response> {
 }
 
 async function serveImage(req: Request, env: Env, key: string): Promise<Response> {
+  if (!env.IMAGES) {
+    return errorJson(req, "Image storage is disabled", 503);
+  }
   if (!SAFE_IMAGE_KEY_RE.test(key)) {
     return errorJson(req, "Not found", 404);
   }

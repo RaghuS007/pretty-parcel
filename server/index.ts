@@ -37,6 +37,16 @@ import {
 const ORDER_STATUSES = ["processing", "shipped", "delivered", "cancelled"] as const;
 const PAYMENT_METHODS = ["cod", "upi", "card"] as const;
 
+// Extension is always derived from this allowlist, never from the client's
+// filename or a raw declared type outside it — see uploadImage().
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const SAFE_IMAGE_KEY_RE = /^products\/[\w-]+\.(?:jpg|jpeg|png|webp)$/;
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -90,12 +100,22 @@ export default {
           return await withAdmin(req, env, updateProduct);
         case "POST /admin/coupons/active":
           return await withAdmin(req, env, updateCouponActive);
+        case "POST /admin/upload":
+          return await withAdmin(req, env, uploadImage);
+        case "DELETE /admin/upload":
+          return await withAdmin(req, env, deleteImage);
       }
 
       // GET /products/:id
       const productMatch = path.match(/^\/api\/products\/([\w-]+)$/);
       if (productMatch && req.method === "GET") {
         return await getProduct(req, env, productMatch[1]);
+      }
+
+      // GET /images/* (public, no auth)
+      const imageMatch = path.match(/^\/api\/images\/(.+)$/);
+      if (imageMatch && req.method === "GET") {
+        return await serveImage(req, env, imageMatch[1]);
       }
 
       return errorJson(req, "Not found", 404);
@@ -217,6 +237,62 @@ async function updateProduct(req: Request, env: Env): Promise<Response> {
 
   const updated = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(body.id).first<ProductRow>();
   return json(req, { product: serializeProduct(updated!) });
+}
+
+// ---------- images (R2) ----------
+
+async function uploadImage(req: Request, env: Env): Promise<Response> {
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return errorJson(req, "Invalid form data", 400);
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return errorJson(req, "A file field is required", 400);
+  }
+
+  const ext = ALLOWED_IMAGE_TYPES[file.type];
+  if (!ext) {
+    return errorJson(req, "Only JPEG, PNG, or WebP images are allowed", 400);
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return errorJson(req, "Image must be 5 MB or smaller", 400);
+  }
+
+  const key = `products/${crypto.randomUUID()}.${ext}`;
+  await env.IMAGES.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+
+  return json(req, { url: `/api/images/${key}`, key }, 201);
+}
+
+async function deleteImage(req: Request, env: Env): Promise<Response> {
+  const body = await readBody(req);
+  const key = typeof body?.key === "string" ? body.key : "";
+  if (!SAFE_IMAGE_KEY_RE.test(key)) {
+    return errorJson(req, "Invalid image key", 400);
+  }
+  await env.IMAGES.delete(key);
+  return json(req, { ok: true });
+}
+
+async function serveImage(req: Request, env: Env, key: string): Promise<Response> {
+  if (!SAFE_IMAGE_KEY_RE.test(key)) {
+    return errorJson(req, "Not found", 404);
+  }
+  const object = await env.IMAGES.get(key);
+  if (!object) return errorJson(req, "Not found", 404);
+
+  return new Response(object.body, {
+    status: 200,
+    headers: {
+      "Content-Type": object.httpMetadata?.contentType || "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      ...corsHeaders(req),
+    },
+  });
 }
 
 // ---------- coupons ----------

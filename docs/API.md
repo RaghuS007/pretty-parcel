@@ -23,6 +23,15 @@ Only active products (`isActive: true`) are visible to customers: `GET /api/prod
 | GET | `/api/admin/products` 👑 | All products, including inactive ones → `{products:[...]}` |
 | PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields, isActive?, stockQuantity?}` (paise prices) → `{product}` updated. `stockQuantity` must be a non-negative integer or 400 |
 
+## Images (R2)
+Backed by the `IMAGES` R2 bucket (`pretty-parcel-images`). Uploaded keys are UUID-based (`products/<uuid>.<ext>`) — the extension is derived server-side from the validated MIME type, never from the client's filename. Returned URLs (`/api/images/<key>`) are **same-origin relative paths**, not absolute — they work unmodified once deployed (web assets and the API share an origin), and the client (`ApiRepository.resolveImageUrl`) only resolves them against the API's own origin for local dev, where the Expo web server and `wrangler dev` run on different ports.
+
+| Method | Path | Body → Response |
+|---|---|---|
+| POST | `/api/admin/upload` 👑 | `multipart/form-data` with a `file` field. Allowed types: `image/jpeg`, `image/png`, `image/webp`; max 5 MB. 400 otherwise. → 201 `{url, key}` |
+| DELETE | `/api/admin/upload` 👑 | `{key}` → `{ok}`. Best-effort object cleanup (e.g. when an admin replaces an image); `key` must match `^products/[\w-]+\.(jpg\|jpeg\|png\|webp)$` or 400. No orphan GC job — this is the only cleanup path |
+| GET | `/api/images/*` | Public, no auth. Streams the R2 object for the given key with its stored `Content-Type` and `Cache-Control: public, max-age=31536000, immutable`. 404 if the key doesn't match the safe pattern above or the object doesn't exist |
+
 **Pagination** (`GET /api/products`): presence of `limit` switches the response to the paged shape — absence gives the exact legacy shape (`{products:[...]}`, full catalog, no `total`/`hasMore`), so existing callers are unaffected. Both params must parse as integers or the request 400s ("limit must be an integer" / "offset must be an integer"); non-integer/non-numeric values (e.g. `limit=abc`) are rejected this way. In-range values are then clamped rather than rejected: `limit` to `[1, 100]` (so `limit=0` → `1`, `limit=500` → `100`), `offset` to `>= 0` (so `offset=-1` → `0`). `total` and `hasMore` are computed from a `SELECT COUNT(*)` using the same `WHERE`/filters as the page query (currently `is_active = 1`). The `popular` and `new` sorts append `, id` as a tiebreaker so repeated identical requests return pages in the same order (both sorts are non-unique on their primary keys alone).
 
 ## Coupons

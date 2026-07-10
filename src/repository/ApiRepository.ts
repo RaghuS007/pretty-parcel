@@ -16,6 +16,22 @@ if (containsLocalhost && isWebProduction) {
   console.warn("EXPO_PUBLIC_API_URL contains localhost in web production. Forcing mock repository mode.");
 }
 
+// Upload responses are same-origin relative URLs ("/api/images/..."), which
+// resolve correctly against document origin once deployed (web + API share
+// an origin). In local dev the API runs on a different port than the Expo
+// web server, so relative URLs need resolving against the API's own origin
+// (derived from API_BASE_URL, which already has a "/api" suffix baked in —
+// hence taking just its .origin rather than concatenating the two).
+export function resolveImageUrl(url: string): string {
+  if (!url || /^(https?:|data:|blob:)/i.test(url)) return url;
+  if (!API_BASE_URL) return url;
+  try {
+    return new URL(API_BASE_URL).origin + url;
+  } catch {
+    return url;
+  }
+}
+
 function mapProduct(p: any): Product {
   return {
     id: p.id,
@@ -32,7 +48,7 @@ function mapProduct(p: any): Product {
     bestseller: p.bestseller || p.isBestseller || false,
     isNew: p.isNew || false,
     icon: p.icon || "",
-    images: p.images || [],
+    images: (p.images || []).map(resolveImageUrl),
     isActive: p.isActive !== false,
     stockQuantity: typeof p.stockQuantity === "number" ? p.stockQuantity : 0,
   };
@@ -145,6 +161,37 @@ export class ApiProductRepository implements IProductRepository {
     } catch (e) {
       console.error("Error in updateProduct:", e);
       throw e;
+    }
+  }
+
+  async uploadImage(file: Blob): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file, "upload.jpg");
+    const res = await fetch(`${API_BASE_URL}/admin/upload`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to upload image");
+    }
+    const data = await res.json();
+    return resolveImageUrl(data.url);
+  }
+
+  async deleteImage(key: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/admin/upload`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ key }),
+      });
+    } catch (e) {
+      // Best-effort cleanup only — a failed delete just leaves an orphaned
+      // R2 object, which is explicitly out of scope to garbage-collect here.
+      console.error("Error in deleteImage:", e);
     }
   }
 }

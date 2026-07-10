@@ -19,6 +19,13 @@ binding = "DB"
 database_name = "pretty-parcel-db"
 database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
+# One-time setup: `pnpm wrangler r2 bucket create pretty-parcel-images`.
+# Local dev needs nothing else — wrangler simulates R2 with --persist-to,
+# which api:dev already passes.
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "pretty-parcel-images"
+
 [vars]
 # Mobile numbers granted the admin role at login (comma-separated).
 ADMIN_MOBILES = "9999999999"

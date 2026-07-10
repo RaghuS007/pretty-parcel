@@ -95,6 +95,18 @@ export class MockProductRepository implements IProductRepository {
     }
     return product;
   }
+
+  async uploadImage(file: Blob): Promise<string> {
+    await delay();
+    // No backend in demo mode — a blob: object URL previews locally and is
+    // good enough for the offline/demo experience.
+    return URL.createObjectURL(file);
+  }
+
+  async deleteImage(key: string): Promise<void> {
+    await delay();
+    // No-op in demo mode; nothing was persisted server-side to clean up.
+  }
 }
 
 export class MockCouponRepository implements ICouponRepository {

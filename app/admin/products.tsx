@@ -19,6 +19,15 @@ import { THEME } from "../../src/constants/theme";
 import { ProductImage } from "../../src/components/ProductImage";
 import { useStore } from "../../src/store/useStore";
 
+// Pulls the R2 key back out of a URL this screen previously uploaded
+// (e.g. "/api/images/products/<uuid>.jpg" -> "products/<uuid>.jpg"), so a
+// replace/remove can best-effort clean up the object it's superseding.
+// Externally pasted URLs won't match and are left alone.
+function extractUploadedKey(url: string): string | null {
+  const match = url.match(/\/api\/images\/(products\/[\w-]+\.(?:jpg|jpeg|png|webp))(?:$|[?#])/);
+  return match ? match[1] : null;
+}
+
 export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,6 +44,7 @@ export default function AdminProducts() {
   const [editBestseller, setEditBestseller] = useState(false);
   const [editImageUrl, setEditImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const showToast = useStore((state) => state.showToast);
 
@@ -118,7 +128,7 @@ export default function AdminProducts() {
                     const max_size = 400;
                     let width = img.width;
                     let height = img.height;
-                    
+
                     if (width > height) {
                       if (width > max_size) {
                         height *= max_size / width;
@@ -134,13 +144,44 @@ export default function AdminProducts() {
                     canvas.height = height;
                     const ctx = canvas.getContext("2d");
                     ctx?.drawImage(img, 0, 0, width, height);
-                    
-                    // Compress to JPEG with 70% quality to keep size under 25KB
-                    const compressed = canvas.toDataURL("image/jpeg", 0.7);
-                    setEditImageUrl(compressed);
+
+                    // Compress to JPEG at 70% quality, then upload — the
+                    // product record stores the returned URL, never the
+                    // image bytes themselves.
+                    canvas.toBlob(async (blob) => {
+                      if (!blob) {
+                        showToast({
+                          type: "error",
+                          title: "Compression Error",
+                          message: "Failed to prepare the photo for upload.",
+                        });
+                        return;
+                      }
+                      const previousUrl = editImageUrl;
+                      setUploading(true);
+                      try {
+                        const url = await ProductRepository.uploadImage(blob);
+                        setEditImageUrl(url);
+                        const previousKey = extractUploadedKey(previousUrl);
+                        if (previousKey) {
+                          ProductRepository.deleteImage(previousKey);
+                        }
+                      } catch (err) {
+                        showToast({
+                          type: "error",
+                          title: "Upload Failed",
+                          message: "Failed to upload the photo. Please try again.",
+                        });
+                      } finally {
+                        setUploading(false);
+                      }
+                    }, "image/jpeg", 0.7);
                   } catch (err) {
-                    // Fallback to original base64 if canvas drawing fails
-                    setEditImageUrl(event.target.result as string);
+                    showToast({
+                      type: "error",
+                      title: "Compression Error",
+                      message: "Failed to process the selected photo.",
+                    });
                   }
                 };
                 img.src = event.target.result as string;
@@ -365,11 +406,27 @@ export default function AdminProducts() {
                       </View>
                     )}
                     <View style={styles.imageActionButtons}>
-                      <Pressable onPress={handleFileSelect} style={styles.uploadBtn}>
-                        <Text style={styles.uploadBtnText}>Select Image File</Text>
+                      <Pressable
+                        onPress={handleFileSelect}
+                        style={styles.uploadBtn}
+                        disabled={uploading}
+                      >
+                        {uploading ? (
+                          <ActivityIndicator size="small" color={THEME.colors.primary} />
+                        ) : (
+                          <Text style={styles.uploadBtnText}>Select Image File</Text>
+                        )}
                       </Pressable>
                       {editImageUrl ? (
-                        <Pressable onPress={() => setEditImageUrl("")} style={styles.removeBtn}>
+                        <Pressable
+                          onPress={() => {
+                            const key = extractUploadedKey(editImageUrl);
+                            if (key) ProductRepository.deleteImage(key);
+                            setEditImageUrl("");
+                          }}
+                          style={styles.removeBtn}
+                          disabled={uploading}
+                        >
                           <Text style={styles.removeBtnText}>Remove</Text>
                         </Pressable>
                       ) : null}

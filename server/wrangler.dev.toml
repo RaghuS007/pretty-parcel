@@ -12,6 +12,10 @@ binding = "DB"
 database_name = "pretty-parcel-db"
 database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "pretty-parcel-images"
+
 [vars]
 ADMIN_MOBILES = "9999999999"
 OTP_DEV_MODE = "true"

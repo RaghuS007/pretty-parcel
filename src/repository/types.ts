@@ -8,6 +8,8 @@ export interface IProductRepository {
   getAdminProducts(): Promise<Product[]>;
   getProductsPage(opts: { limit: number; offset: number; sort?: "popular" | "new" }): Promise<{ products: Product[]; total: number; hasMore: boolean }>;
   updateProduct(product: Product): Promise<Product>;
+  uploadImage(file: Blob): Promise<string>;
+  deleteImage(key: string): Promise<void>;
 }
 
 export interface ICouponRepository {

@@ -6,6 +6,7 @@ export interface IProductRepository {
   getBestsellers(): Promise<Product[]>;
   getNewArrivals(): Promise<Product[]>;
   getAdminProducts(): Promise<Product[]>;
+  getProductsPage(opts: { limit: number; offset: number; sort?: "popular" | "new" }): Promise<{ products: Product[]; total: number; hasMore: boolean }>;
   updateProduct(product: Product): Promise<Product>;
 }
 

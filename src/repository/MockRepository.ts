@@ -57,6 +57,21 @@ export class MockProductRepository implements IProductRepository {
     return products.map(p => ({ ...p, isActive: p.isActive !== false }));
   }
 
+  async getProductsPage(opts: { limit: number; offset: number; sort?: "popular" | "new" }): Promise<{ products: Product[]; total: number; hasMore: boolean }> {
+    await delay();
+    const products = await this.getMergedProducts();
+    // Array.prototype.sort is stable, so ties keep their original array
+    // order — mirroring the server's `, id` tiebreaker on popular/new.
+    const sorted = opts.sort === "popular"
+      ? [...products].sort((a, b) => Number(b.bestseller) - Number(a.bestseller) || b.rating * b.reviews - a.rating * a.reviews)
+      : opts.sort === "new"
+      ? [...products].sort((a, b) => Number(b.isNew) - Number(a.isNew))
+      : products;
+    const total = sorted.length;
+    const page = sorted.slice(opts.offset, opts.offset + opts.limit);
+    return { products: page, total, hasMore: opts.offset + page.length < total };
+  }
+
   async updateProduct(product: Product): Promise<Product> {
     await delay();
     try {

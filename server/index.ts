@@ -125,12 +125,48 @@ async function withAdmin(req: Request, env: Env, handler: AuthedHandler): Promis
 
 async function listProducts(req: Request, env: Env, url: URL): Promise<Response> {
   const sort = url.searchParams.get("sort");
+  // `, id` tiebreakers make popular/new deterministic across repeated pages —
+  // bestseller/rating*reviews and is_new/updated_at are not unique on their own.
   const orderBy =
-    sort === "popular" ? "ORDER BY bestseller DESC, rating * reviews DESC"
-    : sort === "new" ? "ORDER BY is_new DESC, updated_at DESC"
+    sort === "popular" ? "ORDER BY bestseller DESC, rating * reviews DESC, id"
+    : sort === "new" ? "ORDER BY is_new DESC, updated_at DESC, id"
     : "ORDER BY id";
-  const { results } = await env.DB.prepare(`SELECT * FROM products WHERE is_active = 1 ${orderBy}`).all<ProductRow>();
-  return json(req, { products: results.map(serializeProduct) });
+  const where = "WHERE is_active = 1";
+
+  const limitParam = url.searchParams.get("limit");
+  if (limitParam === null) {
+    // Legacy shape: full catalog, no pagination metadata. Existing callers
+    // that never pass `limit` must see byte-for-byte identical responses.
+    const { results } = await env.DB.prepare(`SELECT * FROM products ${where} ${orderBy}`).all<ProductRow>();
+    return json(req, { products: results.map(serializeProduct) });
+  }
+
+  const rawLimit = Number(limitParam);
+  if (!Number.isFinite(rawLimit) || !Number.isInteger(rawLimit)) {
+    return errorJson(req, "limit must be an integer", 400);
+  }
+  const limit = Math.min(100, Math.max(1, rawLimit));
+
+  const offsetParam = url.searchParams.get("offset");
+  const rawOffset = offsetParam !== null ? Number(offsetParam) : 0;
+  if (!Number.isFinite(rawOffset) || !Number.isInteger(rawOffset)) {
+    return errorJson(req, "offset must be an integer", 400);
+  }
+  const offset = Math.max(0, rawOffset);
+
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM products ${where} ${orderBy} LIMIT ? OFFSET ?`
+  ).bind(limit, offset).all<ProductRow>();
+  const countRow = await env.DB.prepare(`SELECT COUNT(*) as count FROM products ${where}`).first<{ count: number }>();
+  const total = countRow?.count ?? 0;
+
+  return json(req, {
+    products: results.map(serializeProduct),
+    total,
+    limit,
+    offset,
+    hasMore: offset + results.length < total,
+  });
 }
 
 async function getProduct(req: Request, env: Env, id: string): Promise<Response> {

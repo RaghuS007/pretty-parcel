@@ -20,8 +20,12 @@ import { SupportDrawer } from "../../src/components/SupportDrawer";
 import { ProductImage } from "../../src/components/ProductImage";
 import { DesktopHeader } from "../../src/components/DesktopHeader";
 
+const RAIL_SIZE = 8;
+
 export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [bestSellers, setBestSellers] = useState<Product[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailInput, setEmailInput] = useState("");
   const [subscribed, setSubscribed] = useState(false);
@@ -51,12 +55,20 @@ export default function HomeScreen() {
     ? { maxWidth: THEME.layout.maxWidth, width: "100%" as const, alignSelf: "center" as const }
     : null;
 
-  // Fetch products catalog on mount
+  // Fetch products catalog on mount. Best sellers / new arrivals rails only
+  // render RAIL_SIZE cards each, so they request just that page instead of
+  // filtering it out of the full catalog fetch.
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await ProductRepository.getProducts();
-        setProducts(data);
+        const [catalog, popularPage, newPage] = await Promise.all([
+          ProductRepository.getProducts(),
+          ProductRepository.getProductsPage({ sort: "popular", limit: RAIL_SIZE, offset: 0 }),
+          ProductRepository.getProductsPage({ sort: "new", limit: RAIL_SIZE, offset: 0 }),
+        ]);
+        setProducts(catalog);
+        setBestSellers(popularPage.products.filter((p) => p.bestseller));
+        setNewArrivals(newPage.products.filter((p) => p.isNew));
       } catch (err) {
         console.error("Error loading products:", err);
       } finally {
@@ -66,9 +78,6 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-  // Filter lists
-  const newArrivals = products.filter((p) => p.isNew);
-  const bestSellers = products.filter((p) => p.bestseller);
   const hairEssentials = products.filter((p) => p.cat === "hair");
   
   // Resolve recently viewed objects from catalog list

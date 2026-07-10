@@ -100,6 +100,26 @@ export class ApiProductRepository implements IProductRepository {
     }
   }
 
+  async getProductsPage(opts: { limit: number; offset: number; sort?: "popular" | "new" }): Promise<{ products: Product[]; total: number; hasMore: boolean }> {
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", String(opts.limit));
+      params.set("offset", String(opts.offset));
+      if (opts.sort) params.set("sort", opts.sort);
+      const res = await fetch(`${API_BASE_URL}/products?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch products page");
+      const data = await res.json();
+      return {
+        products: (data.products || []).map(mapProduct),
+        total: typeof data.total === "number" ? data.total : (data.products || []).length,
+        hasMore: !!data.hasMore,
+      };
+    } catch (e) {
+      console.error("Error in getProductsPage:", e);
+      return { products: [], total: 0, hasMore: false };
+    }
+  }
+
   async updateProduct(product: Product): Promise<Product> {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/products`, {

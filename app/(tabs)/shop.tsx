@@ -43,6 +43,8 @@ const COLLECTIONS = [
   "Soft Hour",
 ];
 
+const PAGE_SIZE = 24;
+
 export default function ShopScreen() {
   const params = useLocalSearchParams<{ category?: string; autofocus?: string; search?: string }>();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -55,6 +57,9 @@ export default function ShopScreen() {
   // Data State
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,12 +77,14 @@ export default function ShopScreen() {
   // TextInput Reference
   const searchInputRef = React.useRef<TextInput>(null);
 
-  // Fetch catalog on mount
+  // Fetch first page of the catalog on mount
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await ProductRepository.getProducts();
-        setAllProducts(data);
+        const result = await ProductRepository.getProductsPage({ limit: PAGE_SIZE, offset: 0 });
+        setAllProducts(result.products);
+        setNextOffset(result.products.length);
+        setHasMore(result.hasMore);
       } catch (err) {
         console.error("Error loading products in shop:", err);
       } finally {
@@ -86,6 +93,21 @@ export default function ShopScreen() {
     }
     loadData();
   }, []);
+
+  const loadMore = async () => {
+    if (loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await ProductRepository.getProductsPage({ limit: PAGE_SIZE, offset: nextOffset });
+      setAllProducts((prev) => [...prev, ...result.products]);
+      setNextOffset((prev) => prev + result.products.length);
+      setHasMore(result.hasMore);
+    } catch (err) {
+      console.error("Error loading more products in shop:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Listen to deep-link category changes from Home Category Row or Search Autofocus
   useEffect(() => {
@@ -236,6 +258,8 @@ export default function ShopScreen() {
         contentContainerStyle={[styles.listContent, isDesktop && { maxWidth: THEME.layout.maxWidth, width: "100%", alignSelf: "center" }]}
         columnWrapperStyle={styles.listColumnWrapper}
         showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Feather name="compass" size={48} color={THEME.colors.secondary} style={{ marginBottom: 12 }} />
@@ -247,6 +271,17 @@ export default function ShopScreen() {
               <Text style={styles.resetBtnText}>Clear All Filters</Text>
             </Pressable>
           </View>
+        }
+        ListFooterComponent={
+          sortedProducts.length === 0 ? null : loadingMore ? (
+            <View style={styles.loadMoreFooter}>
+              <ActivityIndicator size="small" color={THEME.colors.primary} />
+            </View>
+          ) : !hasMore ? (
+            <View style={styles.loadMoreFooter}>
+              <Text style={styles.endOfCatalogText}>You've reached the end of the catalog</Text>
+            </View>
+          ) : null
         }
       />
 
@@ -487,6 +522,16 @@ const styles = StyleSheet.create({
   },
   listColumnWrapper: {
     justifyContent: "space-between",
+  },
+  loadMoreFooter: {
+    paddingVertical: THEME.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  endOfCatalogText: {
+    fontFamily: THEME.fonts.body.regular,
+    fontSize: 11,
+    color: THEME.colors.secondary,
   },
   emptyContainer: {
     alignItems: "center",

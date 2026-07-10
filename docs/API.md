@@ -17,10 +17,13 @@ Only active products (`isActive: true`) are visible to customers: `GET /api/prod
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/products?sort=popular\|new` | Active products only. `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[],isActive,stockQuantity}]}` |
+| GET | `/api/products?sort=popular\|new` | Active products only, full catalog (legacy shape, no `limit`). `{products:[{id,name,cat,sub,pricePaise,mrpPaise,material,collection,tags[],rating,reviews,bestseller,isNew,icon,images[],isActive,stockQuantity}]}` |
+| GET | `/api/products?sort=popular\|new&limit=N&offset=N` | Paged. `{products:[...], total, limit, offset, hasMore}` |
 | GET | `/api/products/:id` | `{product}` or 404 (also 404 if inactive) |
 | GET | `/api/admin/products` 👑 | All products, including inactive ones → `{products:[...]}` |
 | PUT | `/api/admin/products` 👑 | Body `{id, ...partial fields, isActive?, stockQuantity?}` (paise prices) → `{product}` updated. `stockQuantity` must be a non-negative integer or 400 |
+
+**Pagination** (`GET /api/products`): presence of `limit` switches the response to the paged shape — absence gives the exact legacy shape (`{products:[...]}`, full catalog, no `total`/`hasMore`), so existing callers are unaffected. Both params must parse as integers or the request 400s ("limit must be an integer" / "offset must be an integer"); non-integer/non-numeric values (e.g. `limit=abc`) are rejected this way. In-range values are then clamped rather than rejected: `limit` to `[1, 100]` (so `limit=0` → `1`, `limit=500` → `100`), `offset` to `>= 0` (so `offset=-1` → `0`). `total` and `hasMore` are computed from a `SELECT COUNT(*)` using the same `WHERE`/filters as the page query (currently `is_active = 1`). The `popular` and `new` sorts append `, id` as a tiebreaker so repeated identical requests return pages in the same order (both sorts are non-unique on their primary keys alone).
 
 ## Coupons
 Coupon values are **rupees** (`pct`: percent; `flat`: whole ₹; `min`: rupee threshold).
